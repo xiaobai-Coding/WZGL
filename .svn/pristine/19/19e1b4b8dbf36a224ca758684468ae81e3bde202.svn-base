@@ -1,0 +1,627 @@
+<!-- <template>
+  <div>
+    <Form ref="mgform" :model="mg" :label-width="100"  :show-message="false" :rules="ruleValidate">
+      <input type="hidden" v-model="mg.id">
+      <input type="hidden" v-model="mg.userId">
+      <input type="hidden" v-model="mg.departmentId">
+      <Row>
+        <Col span="12">
+          <FormItem label="巡逻班组名称" prop="name">
+            <Input v-model="mg.name" placeholder="请输入巡逻班组名称"></Input>
+          </FormItem>
+        </Col>
+        <Col span="12">
+          <FormItem label="排序码">
+            <InputNumber :max="10" :min="1" v-model="mg.sortNum" placeholder="排序码" style="width: 50px"></InputNumber>
+          </FormItem>
+        </Col>
+      </Row>
+      <Row>
+        <Col span="12">
+          <FormItem label="小组负责人" prop="userName">
+            <Input v-model="mg.userName" placeholder="请选择负责人" :readonly="true">
+            <Button slot="append" icon="md-add" @click="addPerson(false)"></Button>
+            </Input>
+          </FormItem>
+        </Col>
+        <Col span="12">
+          <FormItem label="手机号" >
+            <Input v-model="mg.phone" placeholder="手机号"></Input>
+          </FormItem>
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <FormItem label="所在部门">
+            <Input v-model="mg.departmentName" :readonly="true"/>
+          </FormItem>
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <FormItem label="是否启用">
+            <i-switch v-model="mguse" size="large" @on-change="change">
+              <span slot="open">启用</span>
+              <span slot="close">禁用</span>
+            </i-switch>
+          </FormItem>
+        </Col>
+      </Row>
+    </Form>
+
+
+
+
+			<div style="display: flex;margin-right: 30px;justify-content: space-between;height: 40px;align-items: center;">
+				<span style="margin-left: 10px;color:red;font-size:18px">执行人员</span>
+				<Button type="primary" size="small" @click="addPerson(true)" >添加执行人员</Button>
+			</div>
+			<i-table stripe :columns="columns1" :data="mg.maintenanceUserList" style="margin-top: 10px;" border>
+				<template slot-scope="{ row, index }" slot="action">
+					<Button type="error" size="small" style="margin-right: 5px;width: 80px;" @click="deletePerson(row,index)">删除</Button>
+				</template>
+			</i-table>
+
+
+		<Drawer
+			title="选择教工"
+			width="720"
+			:closable="false"
+			v-model="openDrawer"
+			:transfer="false"
+			:styles="styles"
+			:mask-closable=false
+			>
+			<Input v-model="searchContent" placeholder="请输入人员姓名/工号" style="width: 80%" />
+			<i-button type="primary" icon="ios-search" @click="searchEmploy"  style='margin-left: 20px;width: 100px;float: right;'>搜索</i-button> <br>
+			 <i-table stripe ref="addPeopleTable" :columns="columns2" :data="peopleList" style="margin-top: 10px;" border @on-selection-change="selectItems" ></i-table>
+			 <div class="right">
+			 <Page slot='footer' :show-total=true :transfer=true :total="empPage.total" :current="empPage.current" :page-size="empPage.size" show-elevator   @on-change='empPageChanged'  class="footclass"/>
+			</div>
+			 <div class="demo-drawer-footer">
+					<Button style="margin-right: 8px" @click="openDrawer = false">关闭</Button>
+			 </div>
+			</Drawer>
+  </div>
+</template>
+<script>
+
+  import ucApi from "@/libs/ucApi.js";
+  import util from "@/libs/util.js";
+
+  export default {
+    // components: {choiceEmployee},
+    data() {
+      return {
+        ruleValidate: {
+                    name: [
+                        { required: true, message: '班组名称不能为空', trigger: 'blur' }
+                    ],
+                    userName: [
+                        { required: true, message: '负责人不能为空', trigger: 'blur' }
+                    ],
+                  },
+                  
+        isadd: true,
+        multipleChoice:true,
+
+        mguse: true,
+        mg: {
+          id: null,
+          name: '',
+          sortNum: 1,
+          collegeId: util.getSession("user").collegeId,
+          userId: '',
+          userName: '',
+          phone: '',
+          departmentId: '',
+          departmentName: '',
+          use: '1',
+					maintenanceUserList:[],
+        },
+
+				searchContent:'',
+				empPage:{
+					current:1,
+					size:20,
+					total:0,
+				},
+				peopleList:[],
+				selectPeoples:[],
+				openDrawer:false,
+				columns1: [
+							{
+								title: '序号',
+								key: '',
+								align:'center',
+								render: (h, params) => {
+									 return h('div', [
+										 h('span', params.index+1),
+									 ]);
+								 },
+							 },
+							{
+								 title: '姓名',
+								 key: 'name',
+								 align:'center',
+							 },
+							 {
+							 	 title: '性别',
+							 	 key: 'sexName',
+							 	 align:'center',
+							  },
+							  {
+							  	 title: '电话',
+							  	 key: 'phone',
+							  	 align:'center',
+							   },
+								 {
+							  	 title: '单位名称',
+							  	 key: 'departmentName',
+							  	 align:'center',
+							   },
+								 {
+									 title: '操作',
+									 slot: 'action',
+									 align:'center',
+									 width:100,
+								},
+							],
+
+							columns2: [
+								{
+							   title: '操作',
+							   type: 'selection',
+							   align:'center',
+							   width:80,
+							},
+							{
+								 title: '姓名',
+								 key: 'name',
+								 align:'center',
+							 },
+							 {
+							 	 title: '性别',
+							 	 key: 'sex',
+							 	 align:'center',
+								 render: (h, params) => {
+								     return h('div', [
+								         h('span', params.row.sex=="1"?"女":"男")
+								     ]);
+								 },
+							  },
+							  {
+							  	 title: '电话',
+							  	 key: 'telephone',
+							  	 align:'center',
+							   },
+								 {
+							  	 title: '单位名称',
+							  	 key: '',
+							  	 align:'center',
+									 render: (h, params) => {
+								     return h('div', [
+								         h('span', params.row.organization==undefined?'':params.row.organization.name)
+								     ]);
+								 },
+							   },
+							],
+							styles: {
+                    height: 'calc(100% - 55px)',
+                    overflow: 'auto',
+                    paddingBottom: '53px',
+                    position: 'static'
+                },
+							showModal:this.modalShow,
+							submitLoading:this.saveLoading,
+      }
+    },
+		watch:{
+			//监听外部对值得改变，同步到本地变量上
+			modalShow(value){
+				this.showModal=value;
+			},
+			saveLoading(value){
+				this.submitLoading=value;
+			},
+			//监听本地变量改变，通知外部变量改变
+			showModal(value){
+				this.$emit("changeShowModal",value);
+			},
+			submitLoading(value){
+				this.$emit("changeLoading",value)
+			},
+		},
+    methods: {
+      init (init) {
+        this.$refs.mgform.resetFields();
+				this.selectPeoples=[];
+				this.empPage={
+					current:1,
+					size:20,
+					total:0,
+				},
+				this.searchContent='';
+        if (init) {
+          this.mg.id = init.id;
+          this.mg.name = init.name;
+          this.mg.collegeId = init.collegeId;
+          this.mg.sortNum = init.sortNum;
+          this.mg.userId = init.userId;
+          this.mg.userName = init.userName;
+          this.mg.phone = init.phone;
+          this.mg.departmentId = init.departmentId;
+          this.mg.departmentName = init.departmentName;
+          this.mg.use = init.use;
+
+          if (this.mg.use == 0) {
+            this.mguse = false;
+          } else {
+            this.mguse = true;
+          }
+					let ps=init.maintenanceUserList;
+					let sps=[];
+					if(ps!=undefined && ps.length>0){
+						for(let k=0;k<ps.length;k++){
+							let pm=ps[k];
+							sps.push(pm);
+						}
+						this.selectPeoples=sps;
+						this.mg.maintenanceUserList=ps;
+					}else{
+						this.selectPeoples=[];
+					}
+
+        } else {
+          this.mguse = true;
+          this.mg.use = 1;
+          this.mg.id = null;
+          this.mg.name = '';
+          this.mg.sortNum = 1;
+          this.mg.userId = '';
+          this.mg.userName = '';
+          this.mg.phone = '';
+          this.mg.departmentId = '';
+          this.mg.departmentName = '';
+					this.mg.maintenanceUserList=[];
+					this.selectPeoples=[];
+        }
+      },
+      save() {
+				this.submitLoading=true;
+				 if(this.mg.name ==''){
+						this.$Message.error("请输入名称");
+						this.submitLoading=false;
+						return;
+					}
+					if(this.mg.userId ==''){
+						this.$Message.error("请选择负责人");
+						this.submitLoading=false;
+						return;
+					}
+					if(this.mg.maintenanceUserList.length==0){
+						this.$Message.error("请添加执行人员");
+						this.submitLoading=false;
+						return;
+					}
+					let gs=[];
+					if(this.mg.maintenanceUserList.length>0){
+						for(let i=0;i<this.mg.maintenanceUserList.length;i++){
+							let per=this.mg.maintenanceUserList[i];
+							if(per.id==undefined || per.id==''){
+								gs.push(per);
+							}
+						}
+					};
+					//只上传没有id的保养人，也就是新选择的
+					let mGroup={
+						id : this.mg.id,
+						name : this.mg.name,
+						sortNum : this.mg.sortNum,
+						collegeId:this.$util.getLocal("college"),
+						userId : this.mg.userId,
+						userName : this.mg.userName,
+						phone : this.mg.phone,
+						departmentId : this.mg.departmentId,
+						departmentName :this.mg.departmentName,
+						use :this.mg.use,
+						creator:this.$util.getSession("user").id,
+						maintenanceUserList:gs,
+					}
+
+					console.log('巡逻班组:'+JSON.stringify(mGroup) );
+					this.$post(ucApi.plantEquipment.CREATE_PLANT_GROUP, {
+					  tokenId: util.getSession("token").tokenId,
+					},mGroup).then((res)=> {
+					  if (res.code == 200) {
+						  console.log(res);
+						  this.$Message.success("操作成功");
+						  this.submitLoading=false;
+							this.showModal=false;
+						  this.$emit("refresh");
+					  }else{
+						   this.$Message.error(res.message);
+						   this.submitLoading=false;
+					  }
+
+					})
+					.catch((err)=>{
+						this.$Message.error(err);
+						this.submitLoading=false;
+					});
+      },
+
+      change(status) {
+        if (status) {
+          this.mg.use = 1;
+        } else {
+          this.mg.use = 0;
+        }
+      },
+
+			addPerson(multiple){
+				this.multipleChoice=multiple;
+				this.empPage={
+					current:1,
+					size:20,
+					total:0,
+				};
+				this.openDrawer=true;
+				this.getEmployesList();
+			},
+			deletePerson(row,index){
+        var that=this;
+        this.$Modal.confirm({
+        title: '删除',
+        content: '您确定要删除该人员吗？',
+        width: '400px',
+        okText: '确定',
+        cancelText: '关闭',
+        loading:true,
+        onOk() {
+        	 if(row.id=="" || row.id==undefined){
+        	 		 that.mg.maintenanceUserList.splice(index,1);
+        	 		 that.deleteLocalPerson(row.userId);
+        	     that.buttonLoading=false;
+        	     that.$Modal.remove();
+        	 	}else{
+        	 		//接口删除
+        	 		that.$load.show();
+        	 		that.$delete(that.$api.plantEquipment.DELETE_PLANT_GROUP_USER, {
+        	 		  tokenId:that.$util.getSession("token").tokenId,
+        	 		  userId: that.$util.getSession("user").id,
+        	 		  id: row.id,
+        	 		}).then((res)=> {
+        	 		  if (res.code == 200) {
+        	 			  console.log(res);
+        	 			  that.$Message.success("删除成功");
+        	 			  that.mg.maintenanceUserList.splice(index,1);
+        	 				that.deleteLocalPerson(row.userId);
+        	        that.buttonLoading=false;
+        	        that.$Modal.remove();
+        	 				that.$emit('refresh');
+        	 		  }else{
+        	 			  that.$Message.error(res.message);
+        	 		  }
+        	 		   that.$load.hide();
+        	 		})
+        	 		.catch((err)=>{
+        	 			that.$Message.error(err);
+        	 			that.$load.hide();
+        	 		});
+        	 	}
+          }
+        })
+			},
+			searchEmploy(){
+					this.empPage={
+						current:1,
+						size:20,
+						total:0,
+					},
+					this.getEmployesList();
+				},
+			selectItems(selection){
+				if(this.multipleChoice){
+					let sec=[];
+					for(let i=0;i<selection.length;i++){
+							let person=selection[i];
+							let name=person.name==undefined?'':person.name;
+							if(person.userId!=null && person.userId!=''){
+									let maintenanceUser={
+											maintenanceGroupId:this.mg.id,
+											userId:person.userId,
+                      //employeeId:person.id,//后台从设备复制的模型  没有这个属性
+											name:name,
+											collegeId:this.$util.getLocal("college"),
+											sex:person.sex,
+											sexName:person.sex=="1"?"女":"男",
+											phone:person.telephone,
+											departmentId:person.organization!=undefined?person.organization.id:'',
+											departmentName:person.organization!=undefined?person.organization.name:'',
+											creator:this.$util.getSession("user").id,
+									};
+									sec.push(maintenanceUser);
+							}else{
+								this.$Message.error(name+"不是优圈用户，不能选择");
+								var that=this;
+								setTimeout(function(){
+									that.$refs.addPeopleTable.$refs.tbody.objData[that.getCheckedIndex(person.id)]._isChecked = false;
+								},500);
+							}
+					}
+						this.selectPeoples=this.selectPeoples.concat(sec);
+						//去重
+						this.unique1(this.selectPeoples);
+						this.showPickedPeoples();
+
+						let employeeIds=[];
+						let employeeNames=[];
+						let persons=[];
+						for(let i=0;i<this.selectPeoples.length;i++){
+							let p=this.selectPeoples[i];
+									if(!this.hasThisPeople(p.userId,employeeIds)){
+										employeeIds.push(p.userId);
+										employeeNames.push(p.name);
+										persons.push(p);
+									}
+							//}
+						}
+						this.mg.maintenanceUserList=persons;
+						console.log("userIds:"+employeeIds);
+						console.log("userNames:"+employeeNames);
+						console.log("users:"+persons);
+					}else{
+						if(selection.length>0){
+								for(let i=0;i<selection.length;i++){
+										let employee=selection[i];
+										if(this.mg.userId==employee.userId){
+											selection.splice(i,1);
+											var that=this;
+											setTimeout(function(){
+												that.$refs.addPeopleTable.$refs.tbody.objData[that.getCheckedIndex(employee.id)]._isChecked = false;
+											},200);
+											break;
+										}
+							}
+							let employee=selection[0];
+							this.mg.userId = employee.userId==undefined?"":employee.userId;
+							this.mg.userName = employee.name;
+							this.mg.phone = employee.telephone;
+							this.mg.departmentId = employee.organization==undefined?"":employee.organization.id;
+							this.mg.departmentName = employee.organization==undefined?"":employee.organization.name;
+						}else{
+								this.mg.userId = '';
+								this.mg.userName = '';
+								this.mg.phone = '';
+								this.mg.departmentId = '';
+								this.mg.departmentName = '';
+						}
+
+					}
+				},
+        unique1(arr){
+           var hash=[];
+           for (var i = 0; i < arr.length; i++) {
+              if(hash.indexOf(arr[i])==-1){
+               hash.push(arr[i]);
+              }
+           }
+           return hash;
+         },
+			empPageChanged(page){
+					this.empPage.current=page;
+					this.getEmployesList();
+				},
+			showPickedPeoples(){
+					let pickedPeoples=[];
+					for(let m=0;m<this.selectPeoples.length;m++){
+						let people=this.selectPeoples[m];
+						pickedPeoples.push(people);
+					}
+					for(let i=0;i<this.peopleList.length;i++){
+						let people1=this.peopleList[i];
+						for(let j=0;j<pickedPeoples.length;j++){
+							let people2=pickedPeoples[j];
+							if(people1.userId==people2.userId){
+								this.$refs.addPeopleTable.$refs.tbody.objData[i]._isChecked = true;
+								this.$refs.addPeopleTable.$refs.tbody.objData[i]._isDisabled = true;
+							}
+						}
+					}
+
+				},
+				getEmployesList(){
+					this.$load.show();
+					this.$fetch(this.$api.org.getEmpByOrgId, {
+					  userId: this.$util.getSession("user").id,
+					  collegeId: this.$util.getLocal("college"),
+					  tokenId:this.$util.getSession("token").tokenId,
+					  containSub:true,
+					  curPage:this.empPage.current,
+					  search:this.searchContent,
+					}).then((res)=> {
+					  if (res.code == 200) {
+						  console.log(res);
+						  this.$Message.success("请求完成！");
+						  var body=res.body;
+						  this.empPage.current=body.curPage;
+						  this.empPage.total=body.totalCount;
+						  this.empPage.size=body.pageSize;
+						  this.peopleList=body.list;
+							if(this.multipleChoice){
+								 var that=this;
+									setTimeout(function(){
+										 that.showPickedPeoples();
+									},200)
+							}else{
+								if(this.mg.userId!=null && this.mg.userId!='' && this.getCheckedIndexByUid(this.mg.userId)!=-1){
+									var that=this;
+									setTimeout(function(){
+										 that.$refs.addPeopleTable.$refs.tbody.objData[that.getCheckedIndexByUid(that.mg.userId)]._isChecked = true;
+
+									},200)
+
+								}
+							}
+					  } else{
+						 this.$Message.error(res.message);
+					  }
+					  this.$load.hide();
+					})
+					.catch((err)=>{
+						this.$Message.error(err);
+						this.$load.hide();
+					});
+				},
+
+				hasThisPeople(id,arrays){
+					for(let j=0;j<arrays.length;j++){
+						if(id==arrays[j]){
+							return true;
+						}
+					}
+					return false;
+				},
+				isCheckedThisPerson(userId,peoples){
+					for(let j=0;j<peoples.length;j++){
+						if(userId==peoples[j].userId){
+							return true;
+						}
+					}
+					return false;
+				},
+				getCheckedIndex(pId){
+					for(let i=0;i<this.peopleList.length;i++){
+						let p=this.peopleList[i];
+						if(p.id==pId){
+							return i;
+						}
+					}
+					return -1;
+				},
+				getCheckedIndexByUid(uId){
+					for(let i=0;i<this.peopleList.length;i++){
+						let p=this.peopleList[i];
+						if(p.userId!=undefined && p.userId==uId){
+							return i;
+						}
+					}
+					return -1;
+				},
+				deleteLocalPerson(uId){
+				for(let x=0;x<this.selectPeoples.length;x++){
+								let p=this.selectPeoples[x];
+								if(p.userId==uId){
+									this.selectPeoples.splice(x,1);
+								}
+							}
+				},
+    },
+		 props: ['modalShow','saveLoading'],
+		created() {
+
+    }
+  }
+</script>
+ -->

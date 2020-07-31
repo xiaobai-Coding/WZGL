@@ -1,0 +1,105 @@
+<template>
+    <div class="v-clock">
+      <Tree
+        ref="tree"
+        :data="tableList"
+        :show-checkbox="attribute.showCheckbox"
+        :children-key="childrenKey"
+        :render="renderContent"
+        @on-select-change="changeTree"
+        @on-check-change="checkChange"
+      >
+      </Tree>
+    </div>
+</template>
+
+<script>
+
+    export default {
+        name: "treeTemplate",
+        components: {},
+        props: ['tableList','childrenKey','attribute'],
+        data() {
+            return {
+              data1: [
+                {
+                  title: 'parent 1',
+                  expand: true,
+                  children: [
+                    {
+                      title: 'parent 1-1',
+                      expand: true,
+                      children: [
+                        {
+                          title: 'leaf 1-1-1'
+                        },
+                        {
+                          title: 'leaf 1-1-2'
+                        }
+                      ]
+                    },
+                    {
+                      title: 'parent 1-2',
+                      expand: true,
+                      children: [
+                        {
+                          title: 'leaf 1-2-1'
+                        },
+                        {
+                          title: 'leaf 1-2-1'
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          renderContent (h, { root, node, data }) {
+            return h('span', {
+              style: {
+                display: 'inline-block',
+                width: '100%'
+              }
+            }, [
+              h('span', [
+                h('Icon', {
+                  props: {
+                    type: 'ios-paper-outline'
+                  },
+                  style: {
+                    marginRight: '8px'
+                  }
+                }),
+                h('span', data.name)
+              ]),
+            ]);
+          },
+          changeTree(item){
+            this.$emit('changeTree',item)
+          },
+          checkChange(item){
+            this.$emit('checkChange',item)
+          },
+          getCheckedAndIndeterminateNodes(){
+            this.$emit('getCheckedAndIndeterminateNodes',this.$refs.tree.getCheckedAndIndeterminateNodes())
+          }
+        },
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+</style>

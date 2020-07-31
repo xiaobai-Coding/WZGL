@@ -1,0 +1,9 @@
+.left{
+  display: flex;
+}
+.layout-login-img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  vertical-align: middle;
+}

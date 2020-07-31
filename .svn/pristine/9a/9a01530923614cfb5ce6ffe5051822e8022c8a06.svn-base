@@ -1,0 +1,632 @@
+<template>
+    <div class="v-clock">
+        <Card>
+          <div class="left">
+            <div>
+              <div>
+                <Button icon="ios-add" type="primary" @click="addProjectModal">添加</Button>
+              </div>
+            </div>
+            <div>
+              <div>
+                <Select v-model="search.company" placeholder="所选公司">
+                  <Option v-for="item in companyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+                </Select>
+              </div>
+              <div>
+                <Input clearable v-model="search.query" placeholder="请输入组织名称关键字" />
+              </div>
+              <div>
+                <Button type="primary">查询</Button>
+              </div>
+            </div>
+          </div>
+
+
+          <tableTemplate
+            :tableList="tableList"
+            :columns="columns"
+            :page="page"
+            :size="'small'"
+            @changePage="changePage">
+          </tableTemplate>
+        </Card>
+
+
+      <Modal
+        v-model="managementModal"
+        :title="managementTitle"
+        :loading="managementLoading"
+        :mask-closable="false"
+        @on-ok="managementOk('managementUser')"
+        @on-cancel="managementCancel"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <permissionsForm
+          ref="permissionsForm"
+          :managementUser="managementUser"
+          :managementItem="managementItem">
+        </permissionsForm>
+      </Modal>
+
+
+
+      <Modal
+        v-model="bindingModal"
+        :title="bindingTitle"
+        :loading="bindingLoading"
+        :mask-closable="false"
+        @on-ok="bindingOk"
+        @on-cancel="bindingCancel"
+        width="1000"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <permissionsTable
+          ref="permissionsTable"
+          :bindingTableList="bindingTableList"
+          :bindingUser="bindingUser"
+          :bindingPage="bindingPage"
+          :bindingChoose="bindingChoose"
+          @onRowClick="bindingSelectionChange"
+          @bindingChangePage="bindingChangePage">
+        </permissionsTable>
+      </Modal>
+
+
+
+      <Modal
+        v-model="bindingPerModal"
+        :title="bindingPerTitle"
+        :loading="bindingPerLoading"
+        :mask-closable="false"
+        @on-ok="bindingPerOk"
+        @on-cancel="bindingPerCancel"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <treeTemplate
+          ref="treeTemplate"
+          :tableList="bindingPerList"
+          :childrenKey="'child'"
+          :attribute="attribute"
+          @checkChange="checkChange">
+        </treeTemplate>
+      </Modal>
+
+    </div>
+</template>
+
+<script>
+  import { getAllAccountByPage,update } from '@/axios/api';
+  import { ucRolesGetByPage,ucRolesInsert,ucRolesUpdate,ucRolesDelete,getResource,ucRolesAddRole } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import permissionsForm from './permissionsForm'
+  import permissionsTable from './permissionsTable'
+  import treeTemplate from '@/commonComponent/treeTemplate'
+    export default {
+        name: "permissionsIndex",
+        components: {
+          tableTemplate,
+          permissionsForm,
+          permissionsTable,
+          treeTemplate
+        },
+        props: [''],
+        data() {
+            return {
+              search:{
+                company: '',
+                query: '',
+              },
+              companyList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+              ],
+              tableList:{},
+              page:{
+                current:1,
+              },
+              columns: [
+                {
+                  title:'序号',
+                  type: 'index',
+                  width: 60,
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '项目名称',
+                  key: 'name',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '所属系统',
+                  key: 'systemType',
+                  align: 'center',
+                  tooltip:true,
+                  render: (h, params) => {
+                    return h('div',this.$Filters.systemType(params.row.systemType))
+                  }
+                },
+                {
+                  title: '功能权限',
+                  key: 'functionCount',
+                  align: 'center',
+                  width: 100,
+                  tooltip:true,
+                  sortable: true,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'numberColor',
+                      },params.row.functionCount)
+                    ]);
+                  },
+                },
+                {
+                  title: '已授权账号',
+                  key: 'accountCount',
+                  align: 'center',
+                  tooltip:true,
+                  width: 100,
+                  sortable: true,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'numberColor',
+                      },params.row.accountCount)
+                    ]);
+                  },
+                },
+                {
+                  title: '最新维护时间',
+                  key: 'organizationName',
+                  align: 'center',
+                  tooltip:true,
+                  width: 140,
+                  sortable: true,
+                  render: (h, params) => {
+                    if(params.row.updateTime == null){
+                      return h('span',{
+
+                      },'无')
+                    }else{
+                      return h('span',{
+                        class:'numberColor',
+                      },this.$moment(params.row.updateTime).format('YYYY-MM-DD HH:mm'))
+                    }
+                  }
+                },
+                {
+                  title: '维护人',
+                  key: 'updateUserPhone',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '状态',
+                  align: 'center',
+                  width: 100,
+                  // render: (h, params) => {
+                  //   return h('div',this.$Filters.statusType(params.row.use))
+                  // },
+                  render: (h, params) => {
+                    const str = this.$Filters.enableType(params.row.status)
+                    const color = str == '否' ? 'error' : 'success';
+                    const text = str == '否' ? '无效' : '有效';
+                    return h('Tag', {
+                      props: {
+                        type: 'dot',
+                        color: color
+                      },
+                    }, text);
+                  }
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  align: 'center',
+                  width: 200,
+                  render: (h, params) => {
+                    return h('a', [
+                      h('a', {
+                        on: {
+                          click: () => {
+                            this.bindingPermissions(params.row)
+                          }
+                        }
+                      }, '权限配置'),
+                      h('Divider', {props: {type: 'vertical'}}),
+                      h('a', {
+                        on: {
+                          click: () => {
+                            this.bindingAccount(params.row)
+                          }
+                        }
+                      }, '账号授权'),
+                      h('Divider', {props: {type: 'vertical'}}),
+                      h('img', {
+                        style: {
+                          height: '20px',
+                          width: '20px',
+                        },
+                        attrs: {
+                          src: require('../../../assets/images/编辑.png')
+                        },
+                        on: {
+                          click: e => {
+                            e.stopPropagation();
+                            this.edit(params.row)
+                          }
+                        }
+                      }),
+                      h('Divider', {props: {type: 'vertical'}}),
+                      h('img', {
+                        style: {
+                          height: '20px',
+                          width: '20px',
+                        },
+                        attrs: {
+                          src: require('../../../assets/images/删除.png')
+                        },
+                        on: {
+                          click: e => {
+                            e.stopPropagation();
+                            this.delete(params.row.id)
+                          }
+                        }
+                      },),
+                    ])
+                  }
+                },
+              ],
+
+
+
+              managementModal:false,
+              managementTitle:'',
+              managementLoading:true,
+              managementUser:{},
+              managementItem:{
+                organizationItem:this.$store.getters.menu,
+                peopleItem:[],
+                businessItem:[],
+              },
+              pictureItem:[],
+
+
+              user:this.$store.getters.submitData,
+
+
+
+
+              bindingModal:false,
+              bindingTitle:'',
+              bindingLoading:true,
+              bindingUser:{
+                query:'',
+              },
+              bindingTableList:{},
+              bindingPage:{
+                current:1,
+              },
+              bindingClickItem:{},
+              bindingSelection:[],
+              bindingChoose: '',
+
+
+
+
+              bindingPerModal:false,
+              bindingPerTitle:'',
+              bindingPerLoading:true,
+              bindingPerUser:{
+                query:'',
+              },
+              bindingPerList:[],
+              bindingPerPage:{
+                current:1,
+              },
+              bindingPerClickItem:{},
+              bindingPerSelection:[],
+              bindingPerChoose: '',
+              attribute:{
+                showCheckbox:true,
+              },
+              bindingPerItem:null,
+
+
+
+
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          getIndex(page,query){
+            let data = {
+              pageNum:page
+            }
+            ucRolesGetByPage(data).then(res => {
+              this.tableList = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          managementOk(content){
+            this.$refs.permissionsForm.$refs[content].validate((valid) => {
+              if (valid) {
+                this.postDepartments(this.managementUser);
+              } else {
+                setTimeout(() => {
+                  this.managementLoading = false;
+                  this.$nextTick(() => {
+                    this.managementLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          postDepartments(item){
+            const arr = {...item}
+            let text;
+            switch (arr.systemType) {
+              case '仓库管理':
+                text = 0
+                break
+              case '管理配置':
+                text = 1
+                break
+            }
+            arr.systemType  = text
+            if(arr.id){
+              ucRolesUpdate(arr)
+                .then(res => {
+                  this.managementModal = false;
+                  this.getIndex(this.page.current);
+                })
+                .catch(err => {
+                  this.$Message.error(err);
+                })
+            }else{
+              ucRolesInsert(arr)
+                .then(res => {
+                  this.managementModal = false;
+                  this.getIndex(this.page.current);
+                })
+                .catch(err => {
+                  this.$Message.error(err);
+                })
+            }
+          },
+          managementCancel(content){
+            this.managementModal = false;
+          },
+          edit(item){
+            this.managementUser = {
+              id:item.id,
+              name: item.name,
+              remark: item.remark,
+              status: item.status.toString(),
+              updateUser:item.updateUser,
+              updateUserName:item.updateUserName,
+              updateUserPhone:item.updateUserPhone,
+            }
+            let name;
+            switch (item.systemType) {
+              case 0:
+                name = '仓库管理'
+                    break
+              case 1:
+                name = '管理配置'
+                break
+              default : name = item.systemType
+            }
+            this.managementUser.systemType = name
+            this.managementTitle = '编辑 / 角色信息'
+            this.$nextTick(()=>{
+              this.managementModal = true;
+            })
+          },
+          delete(id){
+            let self = this;
+            this.$Modal.confirm({
+              title: '确定要删除该数据？',
+              content: '删除后该该角色将不再显示并不可再使用，并且已授权该角色的人员将不再有相应权限，请谨慎操作！',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              onOk: function () {
+                ucRolesDelete({
+                  userId: self.user.user.id,
+                  id:id
+                }).then(res => {
+                  self.getIndex(self.page.current);
+                }).catch(err => {
+                  this.$Message.error(err);
+                })
+              }
+            })
+          },
+          addProjectModal(){
+            this.pictureItem = [];
+            this.managementUser = {}
+            this.managementUser.status = '0'
+            this.managementUser.updateUser = this.user.user.id
+            this.managementUser.updateUserName = this.user.user.name,
+            this.managementUser.updateUserPhone = this.user.user.phone,
+
+
+            this.managementTitle = '新建 / 角色信息'
+            this.managementModal = true;
+          },
+          changePage(page){
+            this.page.current = page;
+            this.getIndex(page)
+          },
+          bindingChangePage(page){
+            this.bindingPage.current = page;
+            this.getBindingIndex(page)
+          },
+          bindingSelectionChange(item){
+            this.bindingSelection = item;
+          },
+          bindingAccount(item){
+            this.bindingClickItem = item
+            this.getBindingIndex(1);
+            this.$refs.permissionsTable.bindingChoose = ''
+            this.bindingTitle = '账号授权 / 权限管理'
+            this.bindingModal = true;
+          },
+          bindingCancel(content){
+            this.bindingModal = false;
+          },
+          bindingOk(){
+            if(this.bindingSelection != []){
+              update({
+                id:this.bindingSelection.id,
+                name:this.bindingSelection.name,
+                password:this.bindingSelection.password,
+                phone:this.bindingSelection.phone,
+                employeeId:this.bindingSelection.employeeId,
+                employeeName:this.bindingSelection.employeeName,
+                employeePhone:this.bindingSelection.employeePhone,
+                roleId:this.bindingClickItem.id,
+                roleName:this.bindingClickItem.name,
+                createTime:this.bindingClickItem.createTime,
+                userId: this.user.user.id,
+                userName: this.user.user.name,
+                userPhone: this.user.user.phone,
+                remarks:this.bindingSelection.remarks,
+                status:this.bindingSelection.status,
+                companyName:this.bindingSelection.companyName,
+                companyId:this.bindingSelection.companyId,
+              }).then(res => {
+                this.getIndex(this.page.current);
+                this.bindingModal = false;
+                this.bindingTableList = res;
+              }).catch(err => {
+                this.$Message.error(err);
+              })
+            }else{
+              setTimeout(() => {
+                this.bindingLoading = false;
+                this.$nextTick(() => {
+                  this.bindingLoading = true;
+                });
+              }, 2000);
+            }
+          },
+          getBindingIndex(page){
+            getAllAccountByPage({
+              pageNum:page,
+            }).then(res => {
+              this.bindingTableList = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+
+
+
+
+
+          getBindingPerIndex(item){
+            getResource({
+              userId:this.user.user.id,
+              roleId:item.id
+            }).then(res => {
+              let list = res.body
+              this.packageData(list)
+              this.bindingPerList = list;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          packageData(list){
+            if(list!=undefined && list.length>0){
+              for(let i=0;i<list.length;i++){
+                let item=list[i];
+                if(item.deploy == true){
+                  item.checked = true
+                }
+                let child = item.child;
+                this.packageData(child)
+              }
+            }
+          },
+          bindingPermissions(item){
+            this.bindingPerClickItem = item
+            this.getBindingPerIndex(item);
+            this.$refs.permissionsTable.bindingChoose = ''
+            this.bindingPerTitle = '权限设置 / 角色权限'
+            this.bindingPerModal = true;
+          },
+          bindingPerCancel(content){
+            this.bindingModal = false;
+          },
+          bindingPerOk(){
+            if(this.bindingPerItem != []){
+              for (let i = 0; i < this.bindingPerItem.length; i++) {
+                this.bindingPerItem[i].deploy = true;
+                delete this.bindingPerItem[i].checked
+              }
+              ucRolesAddRole({
+                roleId:this.bindingPerClickItem.id,
+              },{
+                resourceList:this.bindingPerItem
+              }).then(res => {
+                this.getIndex(this.page.current);
+                this.bindingPerModal = false;
+                // this.bindingPerList = res;
+              }).catch(err => {
+                this.$Message.error(err);
+              })
+            }else{
+              setTimeout(() => {
+                this.bindingPerLoading = false;
+                this.$nextTick(() => {
+                  this.bindingPerLoading = true;
+                });
+              }, 2000);
+            }
+          },
+          checkChange(item){
+            this.bindingPerItem = item;
+          },
+        },
+      created() {
+
+      },
+      mounted() {
+        this.getIndex(1);
+      },
+    }
+</script>
+
+<style scoped lang="less">
+  @deep: ~'>>>';
+  @{deep}.ivu-card-body {
+    padding: 10px !important;
+  }
+  .left{
+    >div{
+      display: flex;
+      >div{
+        margin:5px;
+      }
+      >div:nth-of-type(1){
+        margin: 5px 0;
+      }
+    }
+  }
+  @{deep}.ivu-modal-footer{
+    text-align: center!important;
+  }
+</style>

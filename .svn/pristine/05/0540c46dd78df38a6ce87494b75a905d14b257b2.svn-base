@@ -1,0 +1,116 @@
+// The Vue build version to load with the `import` command
+// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+import Vue from 'vue'
+import Vuex from 'vuex'
+import store from './store/index'//仓库
+import App from './App'
+import router from './router/index'
+import ViewUI from 'view-design';
+import 'view-design/dist/styles/iview.css';
+
+Vue.config.productionTip = false
+
+//引入router
+Vue.use(router);
+
+//引入qs
+import qs from 'qs';
+
+
+// 引入loading
+import load from './loading/loading.js'
+Vue.use(load)
+
+
+// Vue.use(ViewUI);
+Vue.use(ViewUI, {
+  transfer: true,
+  size: 'small',
+  capture: false,
+  select: {
+    arrow: 'md-arrow-dropdown',
+    arrowSize: 10
+  }
+});
+
+//引入vuex
+Vue.use(Vuex);
+
+
+import './assets/css/reset.less';//引入重置样式
+
+
+import moment from 'moment'//导moment 时间
+Vue.prototype.$moment = moment;
+moment.locale('zh-cn');
+
+import cityUtil from "@/util/city.js";
+Vue.prototype.$cityUtil = cityUtil;
+import echartUtil from "@/util/echarts-config.js";
+Vue.prototype.$echartUtil = echartUtil;
+
+import PremissionUtil from "@/util/PremissionValidateUtil";
+Vue.prototype.$PremissionUtil = PremissionUtil;
+
+//引入axios
+import './axios/http.js'
+import axios from "axios";
+
+import { postUrl } from "./axios/http";
+Vue.prototype.$postUrl = postUrl;
+
+
+import Filters from "@/filter/filter.js";//全局过滤器集合
+for (let key in Filters) {
+  Vue.filter(key, Filters[key])
+}
+Vue.prototype.$Filters = Filters;
+
+
+import VueAwesomeSwiper from 'vue-awesome-swiper'
+import 'swiper/css/swiper.css'
+Vue.use(VueAwesomeSwiper)
+
+import preview from 'vue-photo-preview'
+import 'vue-photo-preview/dist/skin.css'
+Vue.use(preview)
+
+
+router.beforeEach((to, from, next) => {
+
+  let nickName = localStorage.getItem('submitData');
+  if (nickName) {
+    if(to.name == 'login'){
+      localStorage.clear()
+      next({
+        path: '/login',
+      })
+    }else if(to.name == null){
+      next({
+        path: '/login',
+      })
+      localStorage.clear()
+    }else {
+      let token = store.getters.submitData;
+      axios.defaults.headers.common['token'] = token.token;
+      next();
+    }
+  }else {
+    if(to.path === '/login'){
+      next();
+    }else{
+      next({
+        path: '/login',
+      })
+      localStorage.clear()
+    }
+  }
+})
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  router,
+  store,
+  components: { App },
+  template: '<App/>'
+})

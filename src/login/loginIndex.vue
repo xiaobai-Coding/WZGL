@@ -1,0 +1,227 @@
+<template>
+  <div class="v-clock bgcolor">
+    <div class="box">
+      <div class="boxText">
+          <span style="text-shadow: rgb(70, 0, 0) 2px 1px 3px;
+                        font-size: 50px;">
+            物资管理
+          </span>
+        <span style="font-size: 1.1rem;">Material management</span>
+      </div>
+      <div class="boxForm">
+        <div>
+          <Form ref="formInline" :model="formInline" :rules="ruleInline">
+            <FormItem prop="name">
+              <Input type="text" v-model="formInline.name" placeholder="请输入账号">
+                <Icon type="md-person" size="24" slot="prefix"></Icon>
+              </Input>
+            </FormItem>
+            <FormItem>
+              <Input type="password" v-model="formInline.phone" placeholder="请输入密码">
+                <Icon type="md-lock" size="24" slot="prefix"></Icon>
+              </Input>
+            </FormItem>
+            <FormItem>
+              <div style="display: flex;align-items: center;">
+                <Input type="text" v-model="formInline.code" style="width: 100px;"></Input>
+                <img :src="code.data" style="height: 40px;width: 80px;margin-left: 1%;" alt="">
+                <div
+                  style="height: 40px;
+                        text-decoration: underline;
+                        color: #fff;
+                        margin-left: 2%;
+                        cursor: pointer;"
+                  @click="getImgCode">
+                  换一张
+                </div>
+              </div>
+            </FormItem>
+            <FormItem>
+              <Button class="loginButton" type="error" @click="validationCode" style="font-size: 16px">登录</Button>
+            </FormItem>
+          </Form>
+        </div>
+      </div>
+    </div>
+    <div style="position: fixed;
+                  bottom: 0;
+                  color: #fff;
+                  font-size: 14px;
+                  left: calc(50% - 250px);">
+      2016-2020 © 丹田股份 技术支持:西安优圈信息技术研究院 <a href="http://www.beian.miit.gov.cn" style="color: #fff" target="_blank">陕ICP备16001387号-1</a>
+    </div>
+  </div>
+</template>
+
+<script>
+  import { login,getImgCode,checkImgCode } from '@/axios/api';
+  import md5 from "js-md5";
+    export default {
+        name: "loginIndex",
+        components: {},
+        props: [''],
+        data() {
+            return {
+              formInline: {
+                // 账号
+                name: '',
+                // 密码
+                phone: '',
+                // 验证码
+                code: '',
+              },
+              ruleInline: {
+                name: [
+                  { required: true, message: '请输入账号', trigger: 'blur' }
+                ],
+                phone: [
+                  { required: true, message: '请输入密码', trigger: 'blur' },
+                  { type: 'string', min: 6, message: '密码最少6位', trigger: 'blur' }
+                ]
+              },
+              code:{},
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          // 点击登录 
+          validationCode(){
+            // 
+            checkImgCode({
+              imgCodeKey: this.code.imgCodeKey,
+              imgCode: this.formInline.code
+            }).then(res => {
+              for(let key in res){
+                if(key != 200){
+                  this.$Message.error(res[key]);
+                }else{
+                  this.handleSubmit('formInline')
+                }
+              }     
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          // 提交表单
+          handleSubmit(name) {
+            let pwd = this.changePwd(this.formInline.phone);
+            // 提交表单前进行预校验
+            this.$refs[name].validate((valid) => {
+              if (valid) {
+                login({
+                  name: this.formInline.name,
+                  password: pwd
+                }).then(res => {
+                  if(res.token == undefined){
+                    this.$Message.error(res.message);
+                    return;
+                  }
+                  this.$store.commit('submitData',res)
+                  this.$router.push({
+                    name: 'wareHouse'
+                  });
+                }).catch(err => {
+                  this.$Message.error({content:err,duration:3000});
+                })
+              } else {
+                this.$Message.error('请填写账号密码');
+              }
+            })
+          },
+          changePwd(pwd) {
+            let arr = md5(pwd).split("");
+            let temp1 = arr[0];
+            arr[0] = arr[arr.length - 1];
+            arr[arr.length - 1] = temp1;
+            let temp2 = arr[4];
+            arr[4] = arr[arr.length - 5];
+            arr[arr.length - 5] = temp2;
+            let userpassword = "";
+            for (var i = 0; i < arr.length; i++) {
+              userpassword = userpassword + arr[i];
+            }
+            return userpassword;
+          },
+          getImgCode(){
+            getImgCode().then(res => {
+              this.code = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+        },
+        created() {
+          let that=this;
+            document.onkeydown=e=>{
+              let _key=window.event.keyCode;
+              if(_key===13){
+                that.validationCode()
+              }
+            }
+        },
+        mounted() {
+          this.getImgCode()
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    .bgcolor{
+      height: 100%;
+      background: #56d3f4;
+      background: url('~@/assets/images/bg.png') center center no-repeat;
+      background-size: 100% 100%;
+    }
+    .box{
+      width: 420px;
+      position: absolute;
+      right: 10%;
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      align-items: center;
+      -webkit-box-pack: center;
+      -ms-flex-pack: center;
+      justify-content: center;
+      top: calc(50% - 210px);
+    }
+    .boxForm{
+      width: 100%;
+      height: calc(100% - 75px);
+      background: rgba(103,211,243,0.5);
+      position: relative;
+      box-shadow: 1px 1px 6px #46020254;
+      >div{
+        padding: 3%;
+        form{
+          height: 100%;
+          padding: 7%;
+        }
+      }
+
+    }
+    .boxText{
+      font-size: 2rem;
+      text-align: center;
+      color: #fff;
+    }
+    .loginButton{
+      width: 80%;
+      height: 40px;
+      font-size: 1.4rem;
+      margin-left: 10%;
+      border-radius: 30px;
+      box-shadow: 1px 1px 3px #6d0404;
+    }
+    @{deep}input{
+      height: 40px!important;
+      line-height: 40px!important;
+    }
+    @{deep}.ivu-icon{
+      line-height: 40px!important;
+    }
+</style>

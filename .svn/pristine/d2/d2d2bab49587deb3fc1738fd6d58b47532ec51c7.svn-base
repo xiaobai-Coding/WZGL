@@ -1,0 +1,93 @@
+<template>
+    <div class="v-clock">
+      <Table
+        ref="table"
+        row-key="id"
+        :highlight-row="highlightRow"
+        :height="tableHeight"
+        :columns="columns"
+        :data="tableList.list"
+        border
+        stripe
+        :size="size"
+        @on-select="onSelect"
+        @on-row-click="onRowClick"
+        @on-selection-change="onSelectionChange">
+      </Table>
+      <div class="right" v-if="page">
+        <Page
+          :show-total=true
+          :transfer=true
+          :total="tableList.total"
+          :current="page.pages"
+          :page-size="page.size"
+          show-total
+          size="small"
+          show-elevator
+          @on-change='changePage'/>
+      </div>
+    </div>
+</template>
+
+<script>
+
+    export default {
+        name: "tableTemplate",
+        components: {},
+        props: ['tableList','columns','page','size','height','highlightRow'],
+        data() {
+            return {
+              tableHeight: 450,
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          changePage(page){
+            this.$emit('changePage',page)
+          },
+          onRowClick(item,index){
+            this.$emit('onRowClick',item,index)
+          },
+          onSelectionChange(selection){
+            this.$emit('onSelectionChange',selection)
+          },
+          onSelect(selection,row){
+            this.$emit('onSelect',selection,row)
+          },
+          // onCurrentChange(currentRow,oldCurrentRow){
+          //   this.$emit('onCurrentChange',currentRow,oldCurrentRow)
+          // },
+        },
+        created() {
+
+        },
+        mounted() {
+          if(this.height != null){
+            this.tableHeight = this.height
+          }else{
+            this.tableHeight = window.innerHeight - this.$refs.table.$el.offsetTop - 160
+          }
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-table-tip table td span{
+      font-size: 30px;
+      color: #ccbfbf;
+    }
+  @{deep}.ivu-table-cell{
+    padding: 0 5px;
+  }
+  @{deep}.ivu-tag-dot-inner{
+    margin-right: 0px;
+  }
+  @{deep}.ivu-table-wrapper{
+    height: 100%!important;
+  }
+</style>

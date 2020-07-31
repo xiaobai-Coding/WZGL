@@ -1,0 +1,324 @@
+<template>
+    <div class="v-clock">
+        <Card>
+
+          <div class="box">
+            <div>
+              <Button icon="ios-add" type="primary" @click="addUser">添加</Button>
+            </div>
+            <div>
+              <Button icon="ios-remove" type="primary">删除</Button>
+            </div>
+            <div>
+              <Button icon="md-share-alt" type="primary">导入</Button>
+            </div>
+            <div>
+              <Button icon="ios-undo" type="primary">导出</Button>
+            </div>
+            <div>
+              <Select v-model="search.company" placeholder="所选公司">
+                <Option v-for="item in companyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+              </Select>
+            </div>
+            <div>
+              <Select v-model="search.department" placeholder="所在部门">
+                <Option v-for="item in departmentList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+              </Select>
+            </div>
+            <div>
+              <Select v-model="search.workinState" placeholder="在职状态">
+                <Option v-for="item in workinStateList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+              </Select>
+            </div>
+            <div>
+              <Select v-model="search.accountStatus" placeholder="账号状态">
+                <Option v-for="item in accountStatusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+              </Select>
+            </div>
+            <div>
+              <Input v-model="search.query" placeholder="请输入人员姓名或手机号" />
+            </div>
+            <div>
+              <Button type="primary">查询</Button>
+            </div>
+          </div>
+
+          <tableTemplate
+            :tableList="tableList"
+            :columns="columns"
+            :page="page"
+            @changePage="changePage"
+            @onRowClick="onRowClick"
+            @onSelectionChange="onSelectionChange">
+          </tableTemplate>
+
+
+          <Modal
+            v-model="modalControl"
+            :title="modalTitle"
+            :loading="modalLoading"
+            :mask-closable="false"
+            @on-ok="modalOk('modalUser')"
+            @on-cancel="modalCancel"
+            width="850">
+            <personnel
+              ref="personnel"
+              :modalUser="modalUser"
+              :modalUserItem="modalUserItem"
+              :modalControl="modalControl">
+            </personnel>
+          </Modal>
+        </Card>
+    </div>
+</template>
+
+<script>
+  import { getUserById,getByPage,addUser } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import personnel from './personnel'
+    export default {
+        name: "userIndex",
+        components: {
+          tableTemplate,
+          personnel,
+        },
+        props: [''],
+        data() {
+            return {
+              tableList:{},
+              page:{
+                current:1,
+                size:20,
+              },
+              columns: [
+                {
+                  tittle:'序号',
+                  type: 'index',
+                  width: 60,
+                  align: 'center'
+                },
+                {
+                  title: '姓名',
+                  key: 'name',
+                  align: 'center',
+                },
+              ],
+              user:this.$store.getters.submitData,
+              companyList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+                {
+                  value: 'Sydney',
+                  label: 'Sydney'
+                },
+                {
+                  value: 'Ottawa',
+                  label: 'Ottawa'
+                },
+                {
+                  value: 'Paris',
+                  label: 'Paris'
+                },
+                {
+                  value: 'Canberra',
+                  label: 'Canberra'
+                }
+              ],
+              departmentList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+                {
+                  value: 'Sydney',
+                  label: 'Sydney'
+                },
+                {
+                  value: 'Ottawa',
+                  label: 'Ottawa'
+                },
+                {
+                  value: 'Paris',
+                  label: 'Paris'
+                },
+                {
+                  value: 'Canberra',
+                  label: 'Canberra'
+                }
+              ],
+              workinStateList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+              ],
+              accountStatusList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+              ],
+              search:{
+                company: '',
+                department: '',
+                workinState: '',
+                accountStatus: '',
+                query: '',
+              },
+
+
+
+              modalControl:false,
+              modalTitle:'',
+              modalLoading:true,
+              modalUser:{
+                id:null,
+                pictureItem:[],
+                name:'',
+                phone:'',
+                sex:'男',
+                type:'身份证',
+                idNum:'',
+                title:'',
+                email:'',
+                address:'',
+                company:'',
+                department:'',
+                post:'',
+                jobNum:'',
+                jobStatus:'',
+                remarks:'',
+                accountName:'',
+                password:'',
+                openAccount:false,
+                accountAccess:'',
+              },
+              modalUserItem:{
+                sexItem:[
+                  {
+                    value:'男',
+                    label:'男',
+                  },
+                  {
+                    value:'女',
+                    label:'女',
+                  },
+                ],
+                typeItem:[
+                  {
+                    value:'身份证',
+                    label:'身份证',
+                  },
+                ],
+                titleTypeItem:[
+                  {
+                    value:'职称',
+                    label:'职称',
+                  },
+                ],
+                departmentItem:[
+                  {
+                    value:'所属部门',
+                    label:'所属部门',
+                  },
+                ],
+                jobStatusItem:[
+                  {
+                    value:'在职状态',
+                    label:'在职状态',
+                  },
+                ],
+              },
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          index(page){
+            getByPage({
+              pageNum:page,
+              pageSize:10,
+            }).then(res => {
+              this.tableList = res.body;
+            }).catch(err => {
+              console.log(err)
+            })
+          },
+          changePage(page){
+            this.page.current = page;
+            this.index(page)
+          },
+          onRowClick(item){
+            console.log(item)
+          },
+          onSelectionChange(item){
+            console.log(item)
+          },
+          addUser(){
+            this.modalTitle = '新建/人员信息'
+            this.modalControl = true;
+          },
+          modalOk(content){
+            this.$refs.personnel.$refs[content].validate((valid) => {
+              if (valid) {
+                addUser(this.modalUser).then(res => {
+                  this.tableList = res.body;
+                }).catch(err => {
+                  this.$Message.error(err);
+                })
+              } else {
+                setTimeout(() => {
+                  this.modalLoading = false;
+                  this.$nextTick(() => {
+                    this.modalLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          modalCancel(content){
+            this.modalControl = false;
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+          this.index(1);
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+  .box{
+    display: flex;
+    >div{
+      margin:5px;
+    }
+    >div:nth-of-type(1){
+      margin: 5px 0;
+    }
+  }
+</style>

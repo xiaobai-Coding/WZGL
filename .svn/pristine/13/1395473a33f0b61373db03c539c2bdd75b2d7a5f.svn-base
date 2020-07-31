@@ -1,0 +1,773 @@
+<template>
+    <div class="v-clock">
+        <Card>
+          <div class="left">
+            <div>
+              <div>
+                <Button icon="ios-add" type="primary" @click="addProjectModal">添加</Button>
+              </div>
+            </div>
+            <div>
+              <div>
+                <Select v-model="search.company" placeholder="所选公司">
+                  <Option v-for="item in companyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+                </Select>
+              </div>
+              <div>
+                <Input clearable v-model="search.query" placeholder="请输入组织名称关键字" />
+              </div>
+              <div>
+                <Button type="primary">查询</Button>
+              </div>
+            </div>
+          </div>
+
+
+          <tableTemplate
+            :tableList="tableList"
+            :columns="columns"
+            :page="page"
+            :size="'small'"
+            @changePage="changePage">
+          </tableTemplate>
+        </Card>
+
+
+      <Modal
+        v-model="managementModal"
+        :title="managementTitle"
+        :loading="managementLoading"
+        :mask-closable="false"
+        @on-ok="managementOk('managementUser')"
+        @on-cancel="managementCancel"
+        width="900"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <projectForm
+          ref="projectForm"
+          :managementUser="managementUser"
+          :managementItem="managementItem"
+          :annex="pictureItem"
+          @onChangeAdminName="onChangeAdminName"
+          @setImageListPicture="setImageListPicture"
+          @delImageListPicture="delImageListPicture"
+          @removeImageList="removeImageList"
+          @onChangeOrganizationName="onChangeOrganizationName"
+          @onChangeHeadName="onChangeHeadName"
+          @onChangeContractName="onChangeContractName"
+          @onChangeBusinessName="onChangeBusinessName">
+        </projectForm>
+      </Modal>
+
+
+
+
+      <Modal title="附件"
+             ok-text = '确定'
+             cancel-text = '取消' v-model="larger.visible">
+        <swiper :options="swiperOption" v-if="larger.visible">
+          <swiper-slide class="swiper-slide" v-for="(item,index) in larger.imgName" :key="index">
+            <img :src="item.url"/>
+          </swiper-slide>
+          <!-- 分页器 -->
+          <div class="swiper-pagination"  slot="pagination"></div>
+          <!-- 左右箭头 -->
+          <div class="swiper-button-prev" slot="button-prev"></div>
+          <div class="swiper-button-next" slot="button-next"></div>
+        </swiper>
+<!--        <swiper :options="swiperOption" ref="mySwiper" v-if="larger.visible">-->
+<!--          <swiper-slide class="swiper-slide" v-for="(item,index) in larger.imgName" :key="index">-->
+<!--            <div v-for="(i,index) in larger.imgName" :key="index">-->
+<!--              <img style="width: 100%;" :src="i.url" alt="">-->
+<!--            </div>-->
+<!--          </swiper-slide>-->
+<!--        </swiper>-->
+<!--        <div class="swiper-button-prev"></div>&lt;!&ndash;左箭头。如果放置在swiper-container外面，需要自定义样式。&ndash;&gt;-->
+<!--        <div class="swiper-button-next"></div>&lt;!&ndash;右箭头。如果放置在swiper-container外面，需要自定义样式。&ndash;&gt;-->
+      </Modal>
+    </div>
+</template>
+
+<script>
+  import 'video.js/dist/video-js.css'
+  import 'vue-video-player/src/custom-theme.css'
+  import { ucProjectsGetByPage,ucProjectsInsert,ucProjectsUpdate,ucProjectsDelete,getByPage,organizationsGetByPage,businessNamesGetByPage } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import projectForm from './projectForm'
+
+  import { swiper, swiperSlide } from 'vue-awesome-swiper'
+    export default {
+        name: "projectIndex",
+        components: {
+          tableTemplate,
+          projectForm,
+          swiper,
+          swiperSlide
+        },
+        props: [''],
+        data() {
+            return {
+              search:{
+                company: '',
+                query: '',
+              },
+              companyList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+              ],
+              swiperOption: {
+                notNextTick: true,
+                autoplay: 3000,
+                initialSlide:0,
+                // direction : 'vertical',
+                grabCursor : true,
+                setWrapperSize :true,
+                autoHeight: true,
+                pagination : '.swiper-pagination',
+                paginationClickable :true,
+                navigation: {
+                  nextEl: '.swiper-button-next',
+                  prevEl: '.swiper-button-prev',
+                },
+                mousewheelControl : true,
+                debugger: true,
+                observer:true,
+                observeParents:true,
+                // observeSlideChildren:true,
+              },
+              // swiperOption:{
+              //   //显示分页
+              //   pagination: {
+              //     el: '.swiper-pagination'
+              //   },
+              //   //设置点击箭头
+              //   navigation: {
+              //     nextEl: '.swiper-button-next',
+              //     prevEl: '.swiper-button-prev'
+              //   },
+              //   //自动轮播
+              //   autoplay: {
+              //     delay: 2000,
+              //     //当用户滑动图片后继续自动轮播
+              //     disableOnInteraction: false,
+              //   },
+              //   //开启循环模式
+              //   loop: true
+              // },
+
+              tableList:{},
+              page:{
+                current:1,
+              },
+              columns: [
+                {
+                  title:'序号',
+                  type: 'index',
+                  width: 60,
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '项目名称',
+                  key: 'name',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '所属组织',
+                  key: 'organizationName',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '负责人',
+                  key: 'headName',
+                  align: 'center',
+                  tooltip:true,
+                  // render: (h, params) => {
+                  //   return h('div', [
+                  //     h('div',{
+                  //       class:'numberColor',
+                  //     },params.row.headName)
+                  //   ]);
+                  // },
+                },
+                {
+                  title: '联系电话',
+                  key: 'headPhone',
+                  align: 'center',
+                  tooltip:true,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'numberColor',
+                      },params.row.headPhone)
+                    ]);
+                  },
+                },
+                {
+                  title: '主要业务',
+                  key: 'businessName',
+                  align: 'center',
+                  tooltip:true,
+                  width: 150,
+                  // render: (h, params) => {
+                  //   let that = this;
+                  //   return h('div', that.tableList.list[params.index].businessList.map((item,index) => {
+                  //     if(index + 1 == that.tableList.list[params.index].businessList.length){
+                  //       return h('span', item.businessName)
+                  //     }else{
+                  //       return h('span', item.businessName + '、')
+                  //     }
+                  //     })
+                  //   )
+                  // },
+                  render: (h, params) => {
+                    let texts = params.row.businessList
+                    let textArr = [];
+                    this.tableList.list[params.index].businessList.map((item,index) => {
+                      textArr.push(item.businessName)
+                    })
+                    let arrJoin = textArr.join()
+                    if (arrJoin != null) {
+                      if (arrJoin.length > 9) {
+                        texts = arrJoin.slice(0, 9) + '...' // 进行数字截取
+                      } else {
+                        texts = arrJoin
+                      }
+                    }
+                    return h('div', [
+                      h('Tooltip', {
+                        props: {
+                          placement: 'top',
+                          transfer: true
+                        }
+                      }, [texts, h('span', {
+                        slot: 'content',
+                        style: {
+                          whiteSpace: 'normal'
+                        }
+                      }, arrJoin)
+                      ])
+                    ])
+                  }
+                },
+                {
+                  title: '合同金额',
+                  key: 'contractValue',
+                  align: 'center',
+                  tooltip:true,
+                  sortable: true,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'moneyColor',
+                      },params.row.contractValue)
+                    ]);
+                  },
+                },
+                {
+                  title: '人数',
+                  key: 'peopleCount',
+                  align: 'center',
+                  tooltip:true,
+                  sortable: true,
+                  width: 80,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'numberColor',
+                      },params.row.peopleCount)
+                    ]);
+                  },
+                },
+                {
+                  title: '启用',
+                  align: 'center',
+                  // render: (h, params) => {
+                  //   return h('div',this.$Filters.statusType(params.row.use))
+                  // },
+                  render: (h, params) => {
+                    const str = this.$Filters.enableType(params.row.use)
+                    const color = str == '否' ? 'error' : 'success';
+                    const text = str == '否' ? '否' : '是';
+                    return h('Tag', {
+                      props: {
+                        type: 'dot',
+                        color: color
+                      },
+                    }, text);
+                  }
+                },
+                {
+                  title: '附件',
+                  key: 'annex',
+                  align: 'center',
+                  tooltip:true,
+                  width: 70,
+                  render: (h, params) => {
+                    return h('icon', {
+                      props: {
+                        type: 'ios-link-outline',
+                        size: 'small'
+                      },
+                      style: {
+                        marginRight: '5px',
+                        fontSize:'20px',
+                        cursor:'pointer'
+                      },
+                      on: {
+                        click: () => {
+                          this.largerImage(params.row)
+                          // this.downloadFile(params.row.projectAnnexes)
+                        }
+                      }
+                    })
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  align: 'center',
+                  render: (h, params) => {
+                    return h('a', [
+                      h('img', {
+                        style: {
+                          height: '20px',
+                          width: '20px',
+                        },
+                        attrs: {
+                          src: require('../../../assets/images/编辑.png')
+                        },
+                        on: {
+                          click: e => {
+                            e.stopPropagation();
+                            this.edit(params.row)
+                          }
+                        }
+                      }),
+                      h('Divider', {props: {type: 'vertical'}}),
+                      h('img', {
+                        style: {
+                          height: '20px',
+                          width: '20px',
+                        },
+                        attrs: {
+                          src: require('../../../assets/images/删除.png')
+                        },
+                        on: {
+                          click: e => {
+                            e.stopPropagation();
+                            this.delete(params.row.id)
+                          }
+                        }
+                      },),
+                    ])
+                  }
+                },
+              ],
+
+
+
+              managementModal:false,
+              managementTitle:'',
+              managementLoading:true,
+              managementUser:{},
+              managementItem:{
+                organizationItem:[],
+                peopleItem:[],
+                businessItem:[],
+              },
+              pictureItem:[],
+
+
+              user:this.$store.getters.submitData,
+
+
+              larger:{
+                imgName: [],
+                visible: false,
+                uploadListItems:[],
+                url:'/api/media/upload/image',
+                value:0,
+              },
+              playerOptions:{},//存放播放器的配置文件
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          getPageIndex(page,query){
+            let data = {
+              pageNum:page
+            }
+            ucProjectsGetByPage(data).then(res => {
+              this.tableList = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          getUser(page){
+            return  getByPage({
+              pageNum:page,
+            })
+          },
+          getFirst(page){
+            return organizationsGetByPage({
+              pageNum:page,
+            })
+          },
+          getIndex(page){
+            return ucProjectsGetByPage({
+              pageNum:page,
+            })
+          },
+          getBusiness(page){
+            return businessNamesGetByPage({
+              pageNum:page,
+            })
+          },
+          apiAll(){
+            this.$axios.all([this.getIndex(1),this.getUser(1),this.getFirst(1),this.getBusiness(1)])
+              .then(this.$axios.spread((one,two,three,four) => {
+                this.tableList = one;
+                this.managementItem.peopleItem = two.list;
+                this.managementItem.organizationItem = three.list;
+                this.managementItem.businessItem = four.list;
+              }));
+            // this.$axios.all([this.getUser(1),this.getFirst(1)])
+            //   .then(this.$axios.spread((one,two) => {
+            //     // this.managementItem.adminNameItem = one.list;
+            //     // this.tableList = two;
+            //   }));
+          },
+          managementOk(content){
+            this.$refs.projectForm.$refs[content].validate((valid) => {
+              if (valid) {
+                if(this.pictureItem.length > 0){
+                  this.postImage();
+                }else{
+                  this.postDepartments(this.managementUser);
+                }
+              } else {
+                setTimeout(() => {
+                  this.managementLoading = false;
+                  this.$nextTick(() => {
+                    this.managementLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          boforeUploadImageOne(file){
+            if(file != undefined){
+              if(file.type != undefined){
+                let imageData=new FormData();
+                imageData.append("images",file);
+                imageData.append("userId",'1');
+                imageData.append("tokenId",'1');
+                return this.$postUrl('img/media/upload/image',{},imageData)
+              }
+            }
+          },
+          postImage(){
+            this.$axios.all([this.boforeUploadImageOne(this.pictureItem[0]),this.boforeUploadImageOne(this.pictureItem[1]),this.boforeUploadImageOne(this.pictureItem[2]),this.boforeUploadImageOne(this.pictureItem[3]),this.boforeUploadImageOne(this.pictureItem[4])])
+              .then(this.$axios.spread((imageOne,imageTwo,imageThree,imageFour,imageFive) => {
+                let largeArr = []
+                let smallArr = []
+                if(imageOne != undefined){
+                  largeArr.push(imageOne.result[0].large);
+                  smallArr.push(imageOne.result[0].small);
+                }
+                if(imageTwo != undefined){
+                  largeArr.push(imageTwo.result[0].large);
+                  smallArr.push(imageTwo.result[0].small);
+                }
+                if(imageThree != undefined){
+                  largeArr.push(imageThree.result[0].large);
+                  smallArr.push(imageThree.result[0].small);
+                }
+                if(imageFour != undefined){
+                  largeArr.push(imageFour.result[0].large);
+                  smallArr.push(imageFour.result[0].small);
+                }
+                if(imageFive != undefined){
+                  largeArr.push(imageFive.result[0].large);
+                  smallArr.push(imageFive.result[0].small);
+                }
+                this.add(largeArr,smallArr)
+              }));
+          },
+          add (largeArr,smallArr) {
+            let that = this;
+            let largeImageUrl = [];
+            let smallImageUrl = [];
+            this.managementUser.projectAnnexes = [];
+
+            for (let i = 0; i < largeArr.length; i++) {
+              largeImageUrl.push(largeArr[i].id);
+            }
+            for (let u = 0; u < smallArr.length; u++) {
+              smallImageUrl.push(smallArr[u].id);
+            }
+            if(largeArr.length != 0){
+              for (let v = 0; v < largeArr.length; v++) {
+                this.managementUser.projectAnnexes.push({
+                  url:largeArr[v].url,
+                });
+              }
+              for (let ki = 0; ki < this.pictureItem.length; ki++) {
+                if(this.pictureItem[ki].type == undefined){
+                  this.managementUser.projectAnnexes.push(this.pictureItem[ki])
+                }
+              }
+            }
+            this.postDepartments(this.managementUser);
+          },
+          postDepartments(item){
+            if(this.pictureItem.length == 0){
+              item.annex = null;
+            }
+            delete item.businessId;
+            if(item.id){
+              ucProjectsUpdate(item)
+                .then(res => {
+                  this.managementModal = false;
+                  this.apiAll();
+                })
+                .catch(err => {
+                  this.$Message.error(err);
+                })
+            }else{
+              ucProjectsInsert(item)
+                .then(res => {
+                  this.managementModal = false;
+                  this.apiAll();
+                })
+                .catch(err => {
+                  this.$Message.error(err);
+                })
+            }
+            this.managementModal = false;
+          },
+          managementCancel(content){
+            this.managementModal = false;
+          },
+          edit(item){
+            this.pictureItem = [];
+            this.managementUser = {
+              id:item.id,
+              name: item.name,
+              organizationId: item.organizationId,
+              organizationName: item.organizationName,
+              contractValue: item.contractValue,
+              peopleCount: item.peopleCount,
+              head: item.head,
+              headName: item.headName,
+              headPhone: item.headPhone,
+              contract: item.contract,
+              contractName: item.contractName,
+              contractPhone: item.contractPhone,
+              businessList: item.businessList,
+              // businessId: parseFloat(item.businessId),
+              // businessName: item.businessName,
+              use: item.use.toString(),
+            }
+            this.managementUser.businessId = item.businessList.map(function(value){return Number(value.businessId);});
+              if(item.projectAnnexes){
+                for (let i = 0; i < item.projectAnnexes.length; i++) {
+                  this.pictureItem.push({
+                    url:item.projectAnnexes[i].url
+                  })
+                }
+
+            }
+            this.managementTitle = '编辑 / 项目管理'
+            this.managementModal = true;
+          },
+          delete(id){
+            let self = this;
+            this.$Modal.confirm({
+              title: '删除',
+              content: '是否确认删除？删除后，该信息将不再可见，请谨慎操作！',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              onOk: function () {
+                ucProjectsDelete({
+                  userId: self.user.user.id,
+                  id:id
+                }).then(res => {
+                  self.apiAll();
+                }).catch(err => {
+                  this.$Message.error(err);
+                })
+              }
+            })
+          },
+          setImageListPicture(item){
+            this.pictureItem.push(item)
+          },
+          delImageListPicture(item){
+            this.pictureItem = item.uploadListItems
+          },
+          removeImageList(file){
+            const fileList = this.pictureItem
+            this.pictureItem.splice(fileList.indexOf(file), 1);
+          },
+          onChangeAdminName(item){
+            if(item != undefined){
+              this.managementUser.adminId  = item.value
+              this.managementUser.adminName  = item.label
+            }
+          },
+          onChangeOrganizationName(item){
+            if(item != undefined){
+              this.managementUser.organizationId  = item.value
+              this.managementUser.organizationName  = item.label
+            }
+          },
+          onChangeHeadName(item){
+            if(item != undefined){
+              this.managementUser.head  = item.value
+              this.managementUser.headName  = item.label
+              this.managementUser.headPhone  = item.tag
+            }
+          },
+          onChangeContractName(item){
+            if(item != undefined){
+              this.managementUser.contract  = item.value
+              this.managementUser.contractName  = item.label
+              this.managementUser.contractPhone  = item.tag
+            }
+          },
+          onChangeBusinessName(item){
+            this.managementUser.businessList = [];
+            if(item != undefined){
+              for (let i = 0; i < item.length; i++) {
+                this.managementUser.businessList.push({
+                  businessId:item[i].value,
+                  businessName:item[i].label,
+                })
+              }
+              //
+              // this.managementUser.businessId  = item.value
+              // this.managementUser.businessName  = item.label
+            }
+          },
+          addProjectModal(){
+            this.pictureItem = [];
+            this.managementUser = {}
+            this.managementUser.contractValue = 0
+            this.managementUser.peopleCount = 0
+            this.managementUser.use = '0'
+            this.managementUser.businessList = [];
+
+            this.managementUser.operateId = this.user.user.id
+            this.managementUser.operateName = this.user.user.name,
+            this.managementUser.operatePhone = this.user.user.phone,
+
+
+            this.managementTitle = '新建 / 项目管理'
+            this.managementModal = true;
+          },
+          largerImage(item){
+            if(item.projectAnnexes == 0){
+              this.$Message.warning('没有附件!');
+              return
+            }
+            // this.onLive(item.annex,item.annex);
+            this.larger.imgName = item.projectAnnexes;
+            this.larger.visible = true;
+          },
+          handleView (url) {
+
+          },
+          onLive(onM3u8,onCover){
+            this.playerOptions =  {
+              playbackRates: [0.7, 1.0, 1.5, 2.0], //播放速度
+              autoplay: false, //如果true,浏览器准备好时开始回放。
+              muted: false, // 默认情况下将会消除任何音频。
+              loop: false, // 导致视频一结束就重新开始。
+              preload: 'auto', // 建议浏览器在<video>加载元素后是否应该开始下载视频数据。auto浏览器选择最佳行为,立即开始加载视频（如果浏览器支持）
+              language: 'zh-CN',
+              aspectRatio: '16:9', // 将播放器置于流畅模式，并在计算播放器的动态大小时使用该值。值应该代表一个比例 - 用冒号分隔的两个数字（例如"16:9"或"4:3"）
+              fluid: true, // 当true时，Video.js player将拥有流体大小。换句话说，它将按比例缩放以适应其容器。
+              sources: [{
+                type: "video/mp4",
+                src: onCover//url地址    http（不可播放） https（可播放）
+                // src: 'https://app.help-itool.com//Content/Videos/20180706/06201755590.mp4'//url地址
+              }],
+              poster: onM3u8, //你的封面地址
+              // width: document.documentElement.clientWidth,
+              notSupportedMessage: '此视频暂无法播放，请稍后再试', //允许覆盖Video.js无法播放媒体源时显示的默认信息。
+              controlBar: {
+                timeDivider: true,
+                durationDisplay: true,
+                remainingTimeDisplay: false,
+                fullscreenToggle: true  //全屏按钮
+              }
+            }
+          },
+          downloadFile(item){
+            for (let index = 0; index < item.length; index++) {
+              this.download('第' + index + '个文件', item[index]);
+            }
+          },
+          download(name, href){
+            // window.location.href = href.url;
+            // window.open(href.url, '_blank');
+
+
+            let a = document.createElement('a')
+            a.href =href.url
+            a.click();
+
+
+            // let a = document.createElement("a"), //创建a标签
+            //   e = document.createEvent("MouseEvents"); //创建鼠标事件对象
+            // e.initEvent("click", false, false); //初始化事件对象
+            // a.href = href.url; //设置下载地址
+            // a.download = name; //设置下载文件名
+            // // a.dispatchEvent(e); //给指定的元素，执行事件click事件
+          },
+          changePage(page){
+            this.page.current = page;
+            this.getPageIndex(page)
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+          this.apiAll();
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    .left{
+      >div{
+        display: flex;
+        >div{
+          margin:5px;
+        }
+        >div:nth-of-type(1){
+          margin: 5px 0;
+        }
+      }
+    }
+    @{deep}.ivu-modal-footer{
+      text-align: center!important;
+    }
+</style>

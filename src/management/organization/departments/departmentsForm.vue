@@ -1,0 +1,304 @@
+<template>
+    <div class="v-clock">
+      <Form class="addAccountUser" ref="departmentsUser" :model="departmentsUser" :label-width="100" :rules="ruleInline">
+        <div>
+          <FormItem label="部门编码:">
+            <Input type="text" disabled v-model="departmentsUser.code" placeholder="">
+            </Input>
+          </FormItem>
+          <FormItem label="部门序号:" prop="num">
+            <Input type="text"  v-model="departmentsUser.num" placeholder="请输入部门序号">
+            </Input>
+          </FormItem>
+        </div>
+        <div>
+          <FormItem label="部门名称:" prop="name">
+            <Input type="text" v-model="departmentsUser.name" placeholder="请输入部门名称">
+            </Input>
+          </FormItem>
+          <FormItem label="所属组织:" prop="organizationId">
+            <Select v-model="departmentsUser.organizationId" :label-in-value="true" placeholder="请选择所属组织" @on-change="onChangeAdminName">
+              <Option v-for="(item,index) in departmentsItem.organisationItem"
+                      :label="item.name"
+                      :value="item.id"
+                      :key="index">
+              </Option>
+            </Select>
+          </FormItem>
+        </div>
+        <div>
+          <FormItem label="上级部门:">
+            <div v-if="departmentsUser.fatherName == null" style="cursor: pointer;text-align: right;" @click="chooseTree">选择上级部门</div>
+            <div v-else style="cursor: pointer;text-align: right;" @click="chooseTree">{{departmentsUser.fatherName}}</div>
+          </FormItem>
+          <div style="display: flex;
+                      justify-content: space-between;">
+            <div style="width: 100px;text-align: right;">
+              <span style="display: inline-block;
+                          margin-right: 4px;
+                          line-height: 1;
+                          font-family: SimSun;
+                          font-size: 14px;
+                          color: #ed4014;">
+                            *
+              </span>
+              负责人:
+            </div>
+           <div>
+             <div v-if="departmentsUser.headName == null" style="cursor: pointer;text-align: right;" @click="choosePeople">请选择&nbsp;&nbsp;&nbsp;&nbsp;></div>
+             <div v-else style="cursor: pointer;text-align: right;" @click="choosePeople">{{departmentsUser.headName}} - {{departmentsUser.headPhone}}</div>
+           </div>
+          </div>
+
+        </div>
+        <div>
+          <FormItem label="办公电话:" prop="phone">
+            <Input type="text" v-model="departmentsUser.phone" placeholder="请输入办公电话">
+            </Input>
+          </FormItem>
+          <FormItem label="部门状态:">
+            <Select v-model="departmentsUser.status" placeholder="请选择部门状态">
+              <Option v-for="(item,index) in departmentsItem.statusItem"
+                      :value="item.value"
+                      :label="item.label"
+                      :key="index">
+              </Option>
+            </Select>
+          </FormItem>
+        </div>
+        <div>
+          <FormItem label="备注说明">
+            <Input
+              v-model="departmentsUser.remarks"
+              type="textarea"
+              :autosize="{minRows: 5,maxRows: 5}"
+              placeholder="请输入备注说明" />
+          </FormItem>
+        </div>
+      </Form>
+
+
+      <Modal
+        v-model="treeModal"
+        :title="treeTitle"
+        :loading="treeLoading"
+        :mask-closable="false"
+        @on-ok="treeOk"
+        @on-cancel="treeCancel"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <treeTemplate
+          ref="treeTemplate"
+          :tableList="tableList"
+          :childrenKey="'children'"
+          :attribute="attribute"
+          @changeTree="changeTree">
+        </treeTemplate>
+      </Modal>
+
+
+
+
+      <Modal
+        v-model="bindingModal"
+        :title="bindingTitle"
+        :loading="bindingLoading"
+        :mask-closable="false"
+        @on-ok="bindingOk"
+        @on-cancel="bindingCancel"
+        width="1000"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <accountTable
+          ref="accountTable"
+          :bindingTableList="bindingTableList"
+          :bindingUser="bindingUser"
+          :bindingPage="bindingPage"
+          :bindingChoose="bindingChoose"
+          @onRowClick="bindingSelectionChange"
+          @bindingChangePage="bindingChangePage">
+        </accountTable>
+      </Modal>
+    </div>
+</template>
+
+<script>
+  import treeTemplate from '@/commonComponent/treeTemplate'
+  import { getByPage } from '@/axios/api';
+  import accountTable from '../account/accountTable'
+    export default {
+        name: "departmentsForm",
+        components: {
+          treeTemplate,
+          accountTable,
+        },
+        props: ['departmentsUser','departmentsItem','tableList'],
+        data() {
+            return {
+              ruleInline: {
+                num:[
+                  {required: true, message: '请输入部门序号', trigger: 'blur'},
+                  {
+                    type: 'string',
+                    pattern: /^\d+$/,
+                    message: '部门序号为大于等于0的正整数!',
+                    trigger: 'blur'
+                  }
+                ],
+                name: [
+                  { required: true, message: '请输入部门名称', trigger: 'blur' }
+                ],
+                phone:[
+                  {required: true, message: '请输入办公电话', trigger: 'blur'},
+                  {
+                    type: 'string',
+                    pattern: /^(\(\d{3,4}\)|\d{3,4}-|\s)?\d{7,14}$/,
+                    message: '请输入正确办公电话!',
+                    trigger: 'blur'
+                  }
+                ],
+                organizationId: [
+                  { required: true, message: '请选择所属组织', trigger: 'change' }
+                ],
+                headName: [
+                  { required: true, message: '请选择负责人', trigger: 'blur' }
+                ],
+              },
+
+
+
+              treeModal:false,
+              treeTitle:'',
+              treeLoading:true,
+              treeItem:{},
+
+
+              item:[],
+
+
+
+
+              bindingModal:false,
+              bindingTitle:'',
+              bindingLoading:true,
+              bindingUser:{
+                query:'',
+              },
+              bindingTableList:{},
+              bindingPage:{
+                current:1,
+              },
+              bindingClickItem:{},
+              bindingSelection:[],
+              bindingChoose: '',
+              attribute:{
+                showCheckbox:false,
+              },
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          treeOk(){
+            if(this.item.length != 0){
+              this.departmentsUser.fatherId = this.item[0].id
+              this.departmentsUser.fatherName = this.item[0].name
+            }
+            this.treeModal = false;
+          },
+          postDepartments(){
+            this.treeModal = false;
+          },
+          treeCancel(content){
+            this.treeModal = false;
+          },
+
+          chooseTree(){
+            this.treeItem = {}
+            this.treeTitle = '选择上级部门'
+            this.treeModal = true;
+          },
+          changeTree(item){
+            this.item = item;
+          },
+          onChangeAdminName(item){
+            this.$emit('onChangeAdminName',item)
+          },
+          onChangeHead(item){
+            this.$emit('onChangeHead',item)
+          },
+
+
+          bindingOk(){
+            if(this.bindingSelection != []){
+              this.$emit('choosePeople',this.bindingSelection)
+              this.bindingModal = false;
+            }else{
+              setTimeout(() => {
+                this.bindingLoading = false;
+                this.$nextTick(() => {
+                  this.bindingLoading = true;
+                });
+              }, 2000);
+            }
+          },
+          bindingCancel(content){
+            this.bindingModal = false;
+          },
+          bindingChangePage(page){
+            this.bindingPage.current = page;
+            this.getBindingIndex(page)
+          },
+          bindingSelectionChange(item){
+            this.bindingSelection = item;
+          },
+          choosePeople(){
+            this.getBindingIndex(1);
+            this.$refs.accountTable.bindingChoose = ''
+            this.bindingTitle = '选择负责人'
+            this.bindingModal = true;
+          },
+          getBindingIndex(page){
+            getByPage({
+              pageNum:page,
+            }).then(res => {
+              this.bindingTableList = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    .addAccountUser{
+      >div{
+        margin:15px 0;
+        display: flex;
+        justify-content: space-between;
+        >div{
+          width: 50%;
+        }
+      }
+      >div:nth-of-type(5){
+        display: block;
+        >div:nth-of-type(1){
+          width: 100%;
+        }
+      }
+    }
+    @{deep}.ivu-modal-footer{
+      text-align: center!important;
+    }
+</style>

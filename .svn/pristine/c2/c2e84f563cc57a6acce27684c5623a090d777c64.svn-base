@@ -1,0 +1,98 @@
+<template>
+    <div class="v-clock">
+      <Form class="addAccountUser" ref="addAccountUser" :model="addAccountUser" :label-width="80" :rules="ruleInline">
+        <div>
+          <FormItem label="账号:" prop="name">
+            <Input type="text" v-model="addAccountUser.name" placeholder="请输入账号">
+            </Input>
+          </FormItem>
+          <FormItem label="密码:" prop="password">
+            <Input type="password" password v-model="addAccountUser.password" placeholder="请输入密码">
+            </Input>
+          </FormItem>
+        </div>
+        <div>
+          <div style="width: 80px;text-align: right;">账号权限:</div>
+          <div style="cursor: pointer;">未设置&nbsp;&nbsp;&nbsp;&nbsp;></div>
+        </div>
+        <div>
+          <FormItem label="备注说明">
+            <Input
+              v-model="addAccountUser.remarks"
+              type="textarea"
+              :autosize="{minRows: 5,maxRows: 5}"
+              placeholder="请输入备注说明" />
+          </FormItem>
+        </div>
+        <div>
+          <div style="width: 80px;text-align: right;">使用人:</div>
+          <div style="cursor: pointer;">请选择&nbsp;&nbsp;&nbsp;&nbsp;></div>
+        </div>
+      </Form>
+    </div>
+</template>
+
+<script>
+
+    export default {
+        name: "accountForm",
+        components: {},
+        props: ['addAccountUser'],
+        data() {
+            return {
+              ruleInline: {
+                name: [
+                  {required: true, message: '请输入账号', trigger: 'blur'},
+                  {
+                    type: 'string',
+                    pattern: /^[0-9a-zA-Z]{5,49}.+$/,
+                    message: '账号为6-11位数字或字母!',
+                    trigger: 'blur'
+                  }
+                ],
+                password: [
+                  {required: true, message: '请输入密码', trigger: 'blur'},
+                  {
+                    type: 'string',
+                    pattern: /^[0-9a-zA-Z]{5,49}.+$/,
+                    message: '密码为6-32位数字或字母!',
+                    trigger: 'blur'
+                  }
+                ],
+                role: [
+                  {required: true, message: '请输入角色权限', trigger: 'change'}
+                ],
+              },
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {},
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-form-item {
+        margin: 0px !important;
+    }
+  .addAccountUser{
+    >div{
+      margin:15px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    >div:nth-of-type(3){
+      display: block;
+    }
+  }
+</style>

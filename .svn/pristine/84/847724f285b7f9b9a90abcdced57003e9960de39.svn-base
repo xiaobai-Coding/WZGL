@@ -1,0 +1,198 @@
+<template>
+    <div class="v-clock" style="height: 100%;">
+        <div v-if="uploadList[0].url != null" class="demo-upload-list" v-for="item in uploadList">
+          <img v-if="type == 3" :src="item.url">
+          <div class="demo-carousel" ref="video" v-if="type == 1">
+            <div class="container">
+              <div class="player">
+                <video-player class="vjs-custom-skin" :options="playerOptions"></video-player>
+              </div>
+            </div>
+          </div>
+          <div class="demo-upload-list-cover">
+            <Icon type="ios-eye-outline" @click.native="handleView(item.url)"></Icon>
+            <Icon type="ios-trash-outline" @click.native="handleRemove(item)"></Icon>
+          </div>
+        </div>
+
+
+        <Upload
+          ref="upload"
+          :show-upload-list="false"
+          :before-upload="handleBeforeUpload"
+          type="drag"
+          :action="type2.url">
+          <Button type="primary">{{imageTitle}}</Button>
+        </Upload>
+
+
+
+      <Modal title="大图"
+             ok-text = '保存'
+             cancel-text = '取消' v-model="type2.visible">
+        <div v-if="type2.visible">
+          <img v-if="type == 3" :src="type2.imgName">
+          <div class="demo-carousel" ref="video" v-if="type == 1">
+            <div class="container">
+              <div class="player">
+                <video-player class="vjs-custom-skin" :options="playerOptions"></video-player>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    </div>
+</template>
+
+<script>
+  // import { videoPlayer } from 'vue-video-player';
+  //引入video样式
+  import 'video.js/dist/video-js.css'
+  import 'vue-video-player/src/custom-theme.css'
+  import { image } from '@/axios/api';
+    export default {
+        name: "UploadTemplate",
+        components: {},
+        props: ['type','uploadList','oldPictureItem','imageTitle','imageNum'],
+        data() {
+            return {
+              type2:{
+                imgName: '',
+                visible: false,
+                uploadListItems:[],
+                url:'/api/media/upload/image',
+              },
+              uploadListItem:[],
+              playerOptions:{},//存放播放器的配置文件
+            }
+        },
+        computed: {},
+        watch: {
+          // uploadList(){
+          //   this.uploadListItem = this.uploadList;
+          //   this.type2.uploadListItems = this.uploadListItem;
+          // }
+        },
+        methods: {
+          handleView (url) {
+            if(this.type == 1){
+              this.onLive(this.type2.uploadListItems[0].url,this.type2.uploadListItems[0].url);
+            }
+            this.type2.imgName = url;
+            this.type2.visible = true;
+          },
+          handleRemove (file) {
+            var that=this;
+            this.$Modal.confirm({
+              title: '删除',
+              content: '是否删除？',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              loading:true,
+              onOk() {
+                that.$emit('removeImageList',file)
+                this.$Modal.remove();
+              }
+            })
+          },
+          handleBeforeUpload (file) {
+            if(this.type2.uploadListItems.length == this.imageNum){
+              this.$Message.error('不能超过'+this.imageNum+'个！');
+              return ;
+            }
+            let reader = new FileReader()
+            reader.readAsDataURL(file)
+            var that = this;
+            reader.onload=((e)=>{
+              file.url = reader.result
+              that.type2.uploadListItems.push(file)
+              that.$emit('setImageList',that.type2)
+            })
+            return false;
+          },
+          onLive(onM3u8,onCover){
+            this.playerOptions =  {
+              playbackRates: [0.7, 1.0, 1.5, 2.0], //播放速度
+              autoplay: false, //如果true,浏览器准备好时开始回放。
+              muted: false, // 默认情况下将会消除任何音频。
+              loop: false, // 导致视频一结束就重新开始。
+              preload: 'auto', // 建议浏览器在<video>加载元素后是否应该开始下载视频数据。auto浏览器选择最佳行为,立即开始加载视频（如果浏览器支持）
+              language: 'zh-CN',
+              aspectRatio: '16:9', // 将播放器置于流畅模式，并在计算播放器的动态大小时使用该值。值应该代表一个比例 - 用冒号分隔的两个数字（例如"16:9"或"4:3"）
+              fluid: true, // 当true时，Video.js player将拥有流体大小。换句话说，它将按比例缩放以适应其容器。
+              sources: [{
+                type: "video/mp4",
+                src: onCover//url地址    http（不可播放） https（可播放）
+                // src: 'https://app.help-itool.com//Content/Videos/20180706/06201755590.mp4'//url地址
+              }],
+              poster: onM3u8, //你的封面地址
+              // width: document.documentElement.clientWidth,
+              notSupportedMessage: '此视频暂无法播放，请稍后再试', //允许覆盖Video.js无法播放媒体源时显示的默认信息。
+              controlBar: {
+                timeDivider: true,
+                durationDisplay: true,
+                remainingTimeDisplay: false,
+                fullscreenToggle: true  //全屏按钮
+              }
+            }
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-upload-drag{
+      border: 0!important;
+    }
+    .demo-upload-list{
+      display: inline-block;
+      width: 50%;
+      height: 100%;
+      text-align: center;
+      line-height: 60px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #fff;
+      position: relative;
+      box-shadow: 0 1px 1px rgba(0,0,0,.2);
+      margin-right: 4px;
+    }
+    .demo-upload-list img{
+      width: 100%;
+      height: 100%;
+    }
+    .demo-upload-list-cover{
+      display: none;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,.6);
+    }
+    .demo-upload-list:hover .demo-upload-list-cover{
+      display: block;
+    }
+    .demo-upload-list-cover i{
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      margin: 0 2px;
+      line-height: 122px;
+    }
+    @{deep}.ivu-modal-footer{
+      text-align: center!important;
+    }
+</style>

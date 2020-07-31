@@ -1,0 +1,31 @@
+/**
+ * api接口统一管理
+ */
+
+// const root = process.env.API_ROOT;
+
+
+import { get, post, $delete, put,putUrl } from "./http";
+
+
+
+export const login = data => post("/usercenter/user/login", data);
+
+export const getImgCode = data => get("/usercenter/code/getImgCode", data);
+export const checkImgCode = data => get("/usercenter/code/checkImgCode", data);
+
+
+export const getByPage = data => get("/usercenter/ucUserInfo/getByPage", data);
+export const addUser = data => post("/usercenter/ucUserInfo/addUser", data);
+export const userAddUser = data => post("/usercenter/user/addUser", data);
+export const update = data => put("/usercenter/user/update", data);
+export const untying = data => putUrl("/usercenter/user/untying", data);
+export const updateInfo = data => put("/usercenter/ucUserInfo/updateInfo", data);
+export const image = data => get("/usercenter/media/upload/image", data);
+export const getAllAccountByPage = data => get("/usercenter/user/getAllAccountByPage", data);
+
+export const deleteById = data => $delete("/usercenter/ucUserInfo/deleteById", data);
+
+
+
+

@@ -1,0 +1,14 @@
+<!--新增编辑零星采购页面 -->
+<template>
+
+</template>
+
+<script>
+    export default {
+        name: "GoodsPurchasingLXForm"
+    }
+</script>
+
+<style scoped>
+
+</style>

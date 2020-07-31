@@ -1,0 +1,71 @@
+<template>
+    <div class="v-clock">
+      <Table
+        ref="table"
+        :height="tableHeight"
+        :columns="columns"
+        :data="tableList.list"
+        border
+        stripe
+        :size="size"
+        @on-row-click="onRowClick"
+        @on-selection-change="onSelectionChange">
+      </Table>
+      <div class="right" v-if="page">
+        <Page
+          :show-total=true
+          :transfer=true
+          :total="tableList.totalCount"
+          :current="page.current"
+          :page-size="page.size"
+          show-total
+          size="small"
+          show-elevator
+          @on-change='changePage'/>
+      </div>
+    </div>
+</template>
+
+<script>
+
+    export default {
+        name: "tableTemplate",
+        components: {},
+        props: ['tableList','columns','page','size'],
+        data() {
+            return {
+              tableHeight: 450,
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          changePage(page){
+            this.$emit('changePage',page)
+          },
+          onRowClick(item){
+            this.$emit('onRowClick',item)
+          },
+          onSelectionChange(selection){
+            this.$emit('onSelectionChange',selection)
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+          this.tableHeight = window.innerHeight - this.$refs.table.$el.offsetTop - 160
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-table-tip table td span{
+      font-size: 30px;
+      color: #ccbfbf;
+    }
+</style>

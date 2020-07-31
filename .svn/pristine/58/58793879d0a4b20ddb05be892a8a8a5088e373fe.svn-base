@@ -1,0 +1,92 @@
+<template>
+    <div class="v-clock">
+      <Form ref="bindingAccountList" :model="bindingAccountList" :label-width="80" :rules="ruleInline">
+        <div>
+          <FormItem label="账号" prop="name">
+            <Input type="text" v-model="bindingAccountList.name" placeholder="请输入账号">
+            </Input>
+<!--            <InputNumber :max="10" :min="1" :step="1" v-model="value2"></InputNumber>-->
+          </FormItem>
+          <FormItem label="密码" prop="password">
+            <Input type="text" v-model="bindingAccountList.password" placeholder="请输入密码">
+            </Input>
+          </FormItem>
+        </div>
+<!--        <div>-->
+<!--          <FormItem prop="sex" label="性别">-->
+<!--            <Select v-model="tableList.sex"-->
+<!--                    style="width:80px">-->
+<!--              <Option v-for="(item,index) in bindingAccountObject.sexItem"-->
+<!--                      :value="item.value"-->
+<!--                      :label="item.label"-->
+<!--                      :key="index">-->
+<!--              </Option>-->
+<!--            </Select>-->
+<!--          </FormItem>-->
+<!--        </div>-->
+<!--        <div>-->
+<!--          <FormItem prop="sex" label="性别">-->
+<!--            <Select v-model="tableList.sex"-->
+<!--                    style="width:80px">-->
+<!--              <Option v-for="(item,index) in bindingAccountObject.sexItem"-->
+<!--                      :value="item.value"-->
+<!--                      :label="item.label"-->
+<!--                      :key="index">-->
+<!--              </Option>-->
+<!--            </Select>-->
+<!--          </FormItem>-->
+<!--        </div>-->
+      </Form>
+    </div>
+</template>
+
+<script>
+
+    export default {
+        name: "bindingAccount",
+        components: {},
+        props: ['bindingAccountList','bindingAccountObject'],
+        data() {
+            return {
+              ruleInline: {
+                name: [
+                  {required: true, message: '请输入账号', trigger: 'blur'},
+                  {type: 'number', message: '输入6-11位数字', trigger: 'blur', transform(value) {
+                      if(value != undefined){
+                        if(value.toString().length < 6){
+                          return '请输入最少6位数字';
+                        }
+                        if(value.toString().length > 11){
+                          return '请输入最多11位数字';
+                        }
+                      }
+                      return Number(value);
+                    }}
+                ],
+                password: [
+                  {required: true, message: '请输入密码', trigger: 'change'}
+                ],
+                role: [
+                  {required: true, message: '请输入角色权限', trigger: 'change'}
+                ],
+              },
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {},
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+</style>

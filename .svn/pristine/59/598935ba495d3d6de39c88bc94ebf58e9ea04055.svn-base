@@ -1,0 +1,82 @@
+/**
+ * api接口统一管理
+ */
+
+// const root = process.env.API_ROOT;
+
+
+import { get, post, $delete, put,putUrl } from "./http";
+
+export const image = data => get("/usercenter/media/upload/image", data);
+
+
+
+export const login = data => post("/usercenter/user/login", data);
+export const userAddUser = data => post("/usercenter/user/addUser", data);
+export const update = data => put("/usercenter/user/update", data);
+export const untying = data => putUrl("/usercenter/user/untying", data);
+export const getAllAccountByPage = data => get("/usercenter/user/getAllAccountByPage", data);
+export const userDeleteById = data => $delete("/usercenter/user/deleteById", data);
+
+
+export const getImgCode = data => get("/usercenter/code/getImgCode", data);
+export const checkImgCode = data => get("/usercenter/code/checkImgCode", data);
+
+
+export const getByPage = data => get("/usercenter/ucUserInfo/getByPage", data);
+export const addUser = data => post("/usercenter/ucUserInfo/addUser", data);
+export const updateInfo = data => put("/usercenter/ucUserInfo/updateInfo", data);
+export const deleteById = data => $delete("/usercenter/ucUserInfo/deleteById", data);
+
+
+
+export const insert = data => post("/usercenter/ucDepartments/insert", data);
+export const departmentsUpdate = data => put("/usercenter/ucDepartments/update", data);
+export const departmentsGetByPage = data => get("/usercenter/ucDepartments/getByPage", data);
+export const departmentsDelete = data => $delete("/usercenter/ucDepartments/delete", data);
+
+
+
+export const organizationsGetByPage = data => get("/usercenter/ucOrganizations/getByPage", data);
+export const organizationInsert = data => post("/usercenter/ucOrganizations/insert", data);
+export const organizationsUpdate = data => put("/usercenter/ucOrganizations/update", data);
+export const organizationsDelete = data => $delete("/usercenter/ucOrganizations/delete", data);
+
+
+
+export const businessNamesGetByPage = data => get("/usercenter/businessNames/getByPage", data);
+export const businessNamesInsert = data => post("/usercenter/businessNames/insert", data);
+export const businessNamesUpdate = data => put("/usercenter/businessNames/update", data);
+export const businessNamesDeleteById = data => $delete("/usercenter/businessNames/deleteById", data);
+
+
+
+
+export const postNamesGetByPage = data => get("/usercenter/postNames/getByPage", data);
+export const postNamesInsert = data => post("/usercenter/postNames/insert", data);
+export const postNamesUpdate = data => put("/usercenter/postNames/update", data);
+export const postNamesDeleteById = data => $delete("/usercenter/postNames/deleteById", data);
+
+
+
+
+export const positionNamesGetByPage = data => get("/usercenter/positionNames/getByPage", data);
+export const positionNamesInsert = data => post("/usercenter/positionNames/insert", data);
+export const positionNamesUpdate = data => put("/usercenter/positionNames/update", data);
+export const positionNamesDelete = data => $delete("/usercenter/positionNames/delete", data);
+
+
+
+export const getByOrganizationId = data => get("/usercenter/systemMenus/getByOrganizationId", data);
+export const insertMenu = data => post("/usercenter/systemMenus/insertMenu", data);
+
+
+export const ucProjectsGetByPage = data => get("/usercenter/ucProjects/getByPage", data);
+export const ucProjectsInsert = data => post("/usercenter/ucProjects/insert", data);
+export const ucProjectsUpdate = data => put("/usercenter/ucProjects/update", data);
+export const ucProjectsDelete = data => $delete("/usercenter/ucProjects/delete", data);
+
+
+
+
+

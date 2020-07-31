@@ -1,0 +1,90 @@
+import Vue from 'vue'
+import Router from 'vue-router'
+
+Vue.use(Router)
+
+const originalPush = Router.prototype.push
+Router.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch(err => err)
+}
+
+export default new Router({
+  routes: [
+    {
+      path: '/',
+      name: 'homeIndex',
+      redirect: '/login',
+      component: () => import(/* webpackChunkName: "HelloWorld" */ '@/homeIndex/homeIndex'),
+      children:[
+        {
+          name: '/index',
+          path: '/index',
+          component: resolve => require(['@/homeIndex/rightNavigation'], resolve)
+        },
+
+        //管理配置
+        {
+          name: 'userIndex',
+          path: '/management/organization/user/userIndex',
+          component: resolve => require(['@/management/organization/user/userIndex'], resolve)
+        },
+        {
+          name: 'departmentsIndex',
+          path: '/management/organization/departments/departmentsIndex',
+          component: resolve => require(['@/management/organization/departments/departmentsIndex'], resolve)
+        },
+        {
+          name: 'organizationManagementIndex',
+          path: '/management/organization/organizationManagement/organizationManagementIndex',
+          component: resolve => require(['@/management/organization/organizationManagement/organizationManagementIndex'], resolve)
+        },
+        {
+          name: 'accountIndex',
+          path: '/management/organization/account/accountIndex',
+          component: resolve => require(['@/management/organization/account/accountIndex'], resolve)
+        },
+        {
+          name: 'configurationIndex',
+          path: '/management/configurationIndex/configurationIndex',
+          component: resolve => require(['@/management/configurationIndex/configurationIndex'], resolve)
+        },
+
+        {
+          name: 'businessIndex',
+          path: '/management/systemArgs/businessName/businessIndex',
+          component: resolve => require(['@/management/systemArgs/businessName/businessIndex'], resolve)
+        },
+        {
+          name: 'postNamesIndex',
+          path: '/management/systemArgs/postNames/postNamesIndex',
+          component: resolve => require(['@/management/systemArgs/postNames/postNamesIndex'], resolve)
+        },
+        {
+          name: 'positionNamesIndex',
+          path: '/management/systemArgs/positionNames/positionNamesIndex',
+          component: resolve => require(['@/management/systemArgs/positionNames/positionNamesIndex'], resolve)
+        },
+        {
+          name: 'userMenuIndex',
+          path: '/management/configuration/userMenu/userMenuIndex',
+          component: resolve => require(['@/management/configuration/userMenu/userMenuIndex'], resolve)
+        },
+
+
+
+
+        //仓库
+        {
+          name: 'wareHouse',
+          path: '/wareHouse/wareHouseIndex/wareHouseIndex',
+          component: resolve => require(['@/wareHouse/wareHouseIndex/wareHouseIndex'], resolve)
+        },
+      ],
+    },
+    {
+      name: 'login',
+      path: '/login',
+      component: resolve => require(['@/login/loginIndex'], resolve)
+    },
+  ]
+})

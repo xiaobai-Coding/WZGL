@@ -1,0 +1,119 @@
+let ucMenu = {}
+
+//仓库管理
+ucMenu.wareHouse = {
+  systemName: '仓库管理',
+  subsystem: '仓库管理',
+  module: '仓库管理',
+  nav: [
+    {
+      icon: 'md-person',
+      name: '首页',
+      url: 'wareHouse',
+      role:[],
+    },
+    {
+      icon: 'md-list-box',
+      name: '基础参数',
+      url: 'wareHouseParameter',
+      role:[],
+      firstLayerNav:[
+        {icon: '', name: '物品类别', url: 'MaintenanceGroupTable',role:[]},
+      ],//基础数据
+    },
+    {
+      icon: 'md-stats',
+      name: '管理维护',
+      url: 'equipmentManagement',
+      role:[],
+      firstLayerNav:[
+        {icon: '', name: '物资采购', url: 'EquipmentManage',role:[]},
+      ],//管理维护
+    },
+  ],
+}
+
+
+//管理配置
+ucMenu.configuration = {
+  systemName: '管理配置',
+  subsystem: '管理配置',
+  module: '管理配置',
+  nav: [
+    {
+      icon: 'md-person',
+      name: '首页',
+      url: 'configurationIndex',
+      role:[],
+    },
+    {
+      icon: 'md-list-box',
+      name: '系统参数',
+      url: 'configurationSystem',
+      role:[],
+      firstLayerNav:[
+        {icon: '', name: '业务名称', url: 'businessName',role:[]},
+        {icon: '', name: '岗位名称', url: 'index',role:[]},
+        {icon: '', name: '职位名称', url: 'index',role:[]},
+      ],
+    },
+    {
+      icon: 'md-stats',
+      name: '系统配置',
+      url: 'configurationSetting',
+      role:[],
+      firstLayerNav:[
+        {icon: '', name: '用户菜单管理', url: 'index',role:[]},
+      ],
+    },
+    {
+      icon: 'md-stats',
+      name: '组织架构',
+      url: 'configurationOrganization',
+      role:[],
+      firstLayerNav:[
+        {icon: '', name: '组织管理', url: 'index',role:[]},
+        {icon: '', name: '部门管理', url: 'index',role:[]},
+        {icon: '', name: '人员管理', url: 'userIndex',role:[]},
+        {icon: '', name: '账号管理', url: 'index',role:[]},
+        {icon: '', name: '项目管理', url: 'index',role:[]},
+        {icon: '', name: '权限管理', url: 'index',role:[]},
+      ],
+    },
+    {
+      icon: 'md-stats',
+      name: '日志管理',
+      url: 'configurationLog',
+      role:[],
+      firstLayerNav:[
+        {icon: '', name: '操作日志', url: 'index',role:[]},
+      ],
+    },
+  ],
+}
+
+
+// 首页顶部导航栏
+ucMenu.indexNav = {
+  systemName: '首页',
+  subsystem: '首页',
+  module: '首页',
+  url: '',
+  nav: [
+    { name: '仓库管理',icon:'md-home', url: 'wareHouse',role:[],display:1},
+    { name: '管理配置',icon:'ios-settings', url: 'configuration',role:['104'],moduleCode:24},
+  ],
+  dropDownNav:[
+    // { name: '安保巡逻', url: 'securityPatrol',role:[]},
+    // {icon: 'md-settings', name: '校园报修', url: 'campusRepairService',role:['104']},
+    // {icon: 'md-settings', name: '服务监督', url: 'serviceSupervision',role:['103']},
+  ],
+  watchMonitoringNav:[
+    { name: '设备设施',falseName: '设备管理', url: 'facilitiesWatch',role:['117']},
+    { name: '车辆巡逻',falseName: '平安校园', url: 'vehiclesWatch',role:['121']},
+    { name: '机械设备',falseName: '机械设备', url: 'equipmentWatch',role:[]},
+    { name: '报修监控',falseName: '校园报修', url: 'repairWatch',role:[]},
+  ],
+}
+
+export default ucMenu

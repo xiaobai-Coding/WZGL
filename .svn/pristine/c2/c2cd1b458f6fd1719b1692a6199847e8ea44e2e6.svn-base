@@ -1,0 +1,207 @@
+<template>
+  <div class="v-clock">
+   <Card>
+     <Row>
+       <i-button type="primary"  icon="ios-add" @click="add" >添加</i-button>
+       <div style="float: right">
+         <i-input  v-model="search.content" placeholder="请输入关键字" style="width: 300px"></i-input>
+         <i-button type="primary"  icon="ios-search" @click="getData()">查询</i-button>
+       </div>
+     </Row>
+     <Divider style="height: 2px;background-color:#eeeeee;margin-top: 10px;margin-bottom: 10px;"/>
+       <tableTemplate
+         :tableList="tableList"
+         :columns="columns"
+         :page="page"
+         :size="'small'"
+         @changePage="changePage">
+       </tableTemplate>
+   </Card>
+
+   <!-- <Modal
+	 v-model="dg.patrolGroup"
+	 :title="dg.title"
+	 width="600">
+				<teamGroup ref="business"  :modalShow="dg.patrolGroup" :saveLoading="loading"  @refresh="getData"
+				@changeShowModal="changeModal"  @changeLoading="updateLoading"></teamGroup>
+				<div slot="footer" >
+					<Button type="text" size="large" @click="dg.patrolGroup=false">取消</Button>
+					<Button type="primary" size="large" @click="$refs.mg.save()" :loading="loading">保存</Button>
+			 </div>
+    </Modal> -->
+  </div>
+
+
+</template>
+
+
+<script>
+  import {  } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+
+  export default {
+    components: {tableTemplate},
+    data() {
+      return {
+        tableList:{},
+        page:{
+          current:1,
+          size:20,
+        },
+        search:{
+          content:null,
+        },
+        columns: [
+          {
+            title:'序号',
+            type: 'index',
+            width: 60,
+            align: 'center'
+          },
+          {
+            title: '业务名称',
+            key: 'name',
+            align: 'center',
+          },
+          {
+            title: '排序码',
+            key: 'phone',
+            align: 'center',
+            width: 90,
+          },
+          {
+            title: '备注',
+            key: 'company',
+            align: 'center',
+          },
+          {
+            title: '最新维护时间',
+            key: 'department',
+            align: 'center',
+            width: 150,
+          },
+          {
+            title: '维护人',
+            key: 'post',
+            align: 'center',
+          },
+          {
+            title: '是否启用',
+            key: 'sex',
+            align: 'center',
+            width: 90,
+          },
+          {
+            title: '操作',
+            key: 'action',
+            width: 200,
+            align: 'center',
+            render: (h, params) => {
+                return h('a', [
+                  h('img', {
+                    style: {
+                      height: '20px',
+                      width: '20px',
+                    },
+                    attrs: {
+                      src: require('../../../assets/images/编辑.png')
+                    },
+                    on: {
+                      click: e => {
+                        e.stopPropagation();
+                        //this.edit(params.row)
+                      }
+                    }
+                  }),
+                  h('Divider', {props: {type: 'vertical'}}),
+                  h('img', {
+                    style: {
+                      height: '20px',
+                      width: '20px',
+                    },
+                    attrs: {
+                      src: require('../../../assets/images/删除.png')
+                    },
+                    on: {
+                      click: e => {
+                        e.stopPropagation();
+                        //this.delete(params.row.id)
+                      }
+                    }
+                  },),
+
+                ])
+            }
+          }
+        ],
+
+        modal:{
+          title:'',
+          show:false,
+        },
+				loading:false,
+      }
+    },
+    methods: {
+      getData(page) {
+
+      },
+      changePage(page){
+        this.page.current = page;
+        this.getData(page)
+      },
+      add() {
+        this.modal.title = '添加班组';
+        this.modal.show = true;
+        this.$refs.business.init();
+      },
+      deleteById(id) {
+				var that=this;
+        this.$Modal.confirm({
+          title: '删除',
+          content: '您确定要删除该班组吗？',
+          width: '400px',
+          okText: '确定',
+          cancelText: '关闭',
+					loading:true,
+          onOk() {
+            this.$delete(ucApi.plantEquipment.DELETE_PLANT_GROUP, {
+              tokenId: util.getSession("token").tokenId,
+              userId: util.getSession("user").id,
+              id: id
+            }).then((res)=> {
+              if (res.code == 200) {
+                this.$Message.success('班组已成功删除!');
+								this.buttonLoading=false;
+								this.$Modal.remove();
+								that.getData();
+              }
+            });
+          }
+        })
+      },
+      edit(row) {
+        this.modal.title = '添加班组';
+        this.modal.show = true;
+        let initValue = JSON.parse(JSON.stringify(row));
+        this.$refs.business.init(initValue);
+      },
+			changeModal(value){
+				this.business.show = value;
+			},
+			updateLoading(value){
+				this.loading=value;
+			}
+    },
+		created() {},
+		mounted() {
+			 this.getData();
+		},
+  }
+</script>
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+</style>>

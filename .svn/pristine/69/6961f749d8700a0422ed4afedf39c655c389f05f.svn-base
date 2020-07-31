@@ -1,0 +1,134 @@
+<template>
+    <div class="v-clock">
+      <div>
+        <div class="font13">{{menu.menuTitle}}</div>
+        <Card>
+          <tableTemplate
+            ref="menuTableTemplate"
+            :tableList="menu.menuTableList"
+            :columns="menu.menuColumns"
+            :size="'small'"
+            :highlightRow="true"
+            :height="750"
+            @onRowClick="menuOnRowClick"
+            @onSelectionChange="onSelectionChange">
+          </tableTemplate>
+
+          <div class="left">
+            <div>
+              <Button :disabled="menu.menuDisabled" icon="ios-arrow-round-up" type="primary" @click="up(menu,changeItem)">上移</Button>
+            </div>
+            <div>
+              <Button :disabled="menu.menuDisabled" icon="ios-arrow-round-down" type="primary" @click="menuDown(menu,changeItem)">下移</Button>
+            </div>
+            <div>
+              <Button :disabled="menu.menuDisabled" icon="ios-checkmark" type="primary" @click="menuUseOpen(menu)">开启</Button>
+            </div>
+            <div>
+              <Button :disabled="menu.menuDisabled" icon="ios-close" type="primary" @click="menuUseClose(menu)">关闭</Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+</template>
+
+<script>
+  import tableTemplate from '@/commonComponent/tableTemplate'
+    export default {
+        name: "userMenuTemplate",
+        components: {
+          tableTemplate,
+        },
+        props: ['menu'],
+        data() {
+            return {
+              changeItem:[],
+            }
+        },
+        computed: {
+          // menu(){
+          //   return this.menu;
+          // }
+        },
+        watch: {
+          // 'menu':{
+          //   deep:true,
+          //   immediate: false,
+          //   handler:function(newV,oldV){
+          //     this.menu = newV
+          //   }
+          // }
+        },
+        methods: {
+          menuOnRowClick(item,index){
+            this.$emit('menuOnRowClick',item,index)
+          },
+          onSelectionChange(item){
+            this.$emit('onSelectionChange',item)
+          },
+          up(item){
+            this.$emit('up',item)
+          },
+          menuDown(item){
+            this.$emit('menuDown',item)
+          },
+          menuUseOpen(item){
+            this.$emit('menuUseOpen',item)
+          },
+          menuUseClose(item){
+            this.$emit('menuUseClose',item)
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-checkbox-wrapper {
+      margin-right: 0!important;
+    }
+    .left{
+      >div{
+        display: flex;
+        align-items: center;
+        >div{
+          margin:5px;
+        }
+        >div:nth-of-type(1){
+          margin: 5px 0;
+        }
+        >button{
+          width: 60px;
+          padding: 0 5px;
+        }
+      }
+    }
+    @{deep}.ivu-btn>.ivu-icon+span, .ivu-btn>span+.ivu-icon{
+      margin-left: 0;
+    }
+    .box{
+      >div{
+        >div{
+          >div:nth-of-type(1){
+            text-align: center;
+            height: 39px;
+            line-height: 39px;
+            background-color: rgba(255, 255, 255, 1);
+          }
+          >div:nth-of-type(2){
+            margin-top: 10px;
+          }
+        }
+      }
+    }
+</style>

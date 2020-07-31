@@ -1,0 +1,33 @@
+<template>
+    <div class="v-clock">
+        login
+    </div>
+</template>
+
+<script>
+
+    export default {
+        name: "loginIndex",
+        components: {},
+        props: [''],
+        data() {
+            return {}
+        },
+        computed: {},
+        watch: {},
+        methods: {},
+        created() {
+
+        },
+        mounted() {
+
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+</style>

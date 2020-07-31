@@ -1,0 +1,109 @@
+<template>
+  <div class="layout">
+    <Layout>
+      <Header style="background-color: rgba(111, 97, 113, 1)">
+        <!--顶部导航-->
+        <topNavigation
+          :topMenu="topMenu"
+          @sideNavigation="sideNavigation">
+        </topNavigation>
+      </Header>
+      <Layout :class="[ leftMenu.length != 0 ? 'sl' : '' ]">
+        <Sider v-if="leftMenu.length != 0" hide-trigger :style="{background: '#fff'}">
+          <!--左侧导航-->
+          <leftNavigation ref="leftNavigation" :leftMenu="leftMenu"></leftNavigation>
+        </Sider>
+
+        <Layout :style="{padding: '10px', width: 'calc(100% - 200px)'}">
+          <!--右侧路由-->
+          <router-view ref="routerView" style="height: 100%;"></router-view>
+        </Layout>
+      </Layout>
+    </Layout>
+  </div>
+</template>
+
+<script>
+    import { getByOrganizationId } from '@/axios/api';
+    import topNavigation from './topNavigation'
+    import leftNavigation from './leftNavigation'
+    import menu from "../menu/menuModule.js";
+    export default {
+        name: "index",
+        components: {
+          topNavigation,
+          leftNavigation,
+        },
+        props: [''],
+        data() {
+            return {
+              topMenu:[],
+              // topMenu:this.menu,
+              leftMenu:[],
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          sideNavigation(name){
+            this.leftMenu = name;
+            this.$store.commit('topNav',name)
+            if (this.$refs.leftNavigation != undefined) {
+              this.$refs.leftNavigation.activeName = '';
+              this.$refs.leftNavigation.openActiveName = [''];
+              this.$nextTick(() => {
+                if (this.$refs.leftNavigation != undefined) {
+                  this.$refs.leftNavigation.$refs.menu.updateOpened();
+                  this.$refs.leftNavigation.$refs.menu.updateActiveName();
+                }
+                this.$nextTick(() => {
+                  this.$refs.leftNavigation.clickMenu(name[0].name, name[0].url);
+                })
+              })
+            }
+          },
+          getStore(){
+            if(this.$store.getters.topNav != null){
+              this.leftMenu = this.$store.getters.topNav
+            }
+          },
+          getMenu(){
+            getByOrganizationId({
+              organizationId:this.$store.getters.submitData.user.userInfo.company,
+            }).then(res => {
+              this.topMenu = res.menuList
+              this.$store.commit('menu',res.menuList)
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          }
+        },
+        created() {
+          // this.topMenu = menu
+        },
+        mounted() {
+          this.getStore();
+          this.getMenu();
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.v-clock{
+      >div{
+        height: 100%;
+      }
+    }
+    .sl {
+      display: flex;
+      flex-direction: row;
+      height: e('calc(100% - 64px)')!important;
+      > .ivu-layout-content {
+        width: e('calc(100% - 210px)');
+      }
+    }
+</style>

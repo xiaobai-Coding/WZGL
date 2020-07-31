@@ -1,0 +1,203 @@
+<template>
+  <div class="v-clock">
+   <Card>
+     <Row>
+       <i-button type="primary"  icon="ios-add" @click="add" >添加</i-button>
+       <div style="float: right">
+         <i-input  v-model="search.content" placeholder="请输入关键字" style="width: 300px"></i-input>
+         <i-button type="primary"  icon="ios-search" @click="getIndex(1,search)">查询</i-button>
+       </div>
+     </Row>
+     <Divider style="height: 2px;background-color:#eeeeee;margin-top: 10px;margin-bottom: 10px;"/>
+       <tableTemplate
+         :tableList="tableList"
+         :columns="columns"
+         :page="page"
+         :size="'small'"
+         @changePage="changePage">
+       </tableTemplate>
+   </Card>
+
+   <!-- <Modal
+	 v-model="dg.patrolGroup"
+	 :title="dg.title"
+	 width="600">
+				<teamGroup ref="business"  :modalShow="dg.patrolGroup" :saveLoading="loading"  @refresh="getData"
+				@changeShowModal="changeModal"  @changeLoading="updateLoading"></teamGroup>
+				<div slot="footer" >
+					<Button type="text" size="large" @click="dg.patrolGroup=false">取消</Button>
+					<Button type="primary" size="large" @click="$refs.mg.save()" :loading="loading">保存</Button>
+			 </div>
+    </Modal> -->
+  </div>
+
+
+</template>
+
+
+<script>
+  import { businessNamesGetByPage,businessNamesInsert,businessNamesUpdate,businessNamesDeleteById } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+
+  export default {
+    name: "businessIndex",
+    components: {tableTemplate},
+    data() {
+      return {
+        tableList:{},
+        page:{
+          current:1,
+          size:20,
+        },
+        search:{
+          content:null,
+        },
+        columns: [
+          {
+            title:'序号',
+            type: 'index',
+            width: 60,
+            align: 'center'
+          },
+          {
+            title: '业务名称',
+            key: 'name',
+            align: 'center',
+          },
+          {
+            title: '排序码',
+            key: 'phone',
+            align: 'center',
+            width: 90,
+          },
+          {
+            title: '备注',
+            key: 'company',
+            align: 'center',
+          },
+          {
+            title: '最新维护时间',
+            key: 'department',
+            align: 'center',
+            width: 150,
+          },
+          {
+            title: '维护人',
+            key: 'post',
+            align: 'center',
+          },
+          {
+            title: '是否启用',
+            key: 'sex',
+            align: 'center',
+            width: 90,
+          },
+          {
+            title: '操作',
+            key: 'action',
+            width: 200,
+            align: 'center',
+            render: (h, params) => {
+                return h('a', [
+                  h('img', {
+                    style: {
+                      height: '20px',
+                      width: '20px',
+                    },
+                    attrs: {
+                      src: require('../../../assets/images/编辑.png')
+                    },
+                    on: {
+                      click: e => {
+                        e.stopPropagation();
+                        //this.edit(params.row)
+                      }
+                    }
+                  }),
+                  h('Divider', {props: {type: 'vertical'}}),
+                  h('img', {
+                    style: {
+                      height: '20px',
+                      width: '20px',
+                    },
+                    attrs: {
+                      src: require('../../../assets/images/删除.png')
+                    },
+                    on: {
+                      click: e => {
+                        e.stopPropagation();
+                        //this.delete(params.row.id)
+                      }
+                    }
+                  },),
+
+                ])
+            }
+          }
+        ],
+
+        modal:{
+          title:'',
+          show:false,
+        },
+				loading:false,
+      }
+    },
+    methods: {
+      getIndex(page,query){
+        businessNamesGetByPage({
+          pageNum:page,
+        }).then(res => {
+          this.tableList = res;
+        }).catch(err => {
+          console.log(err)
+        })
+      },
+      changePage(page){
+        this.page.current = page;
+        this.getIndex(page)
+      },
+      add() {
+        this.modal.title = '添加班组';
+        this.modal.show = true;
+        this.$refs.business.init();
+      },
+      delete(id){
+        let self = this;
+        this.$Modal.confirm({
+          title: '删除',
+          content: '是否确认删除？删除后，该信息将不再可见，请谨慎操作！',
+          width: '400px',
+          okText: '确定',
+          cancelText: '关闭',
+          onOk: function () {
+            businessNamesDeleteById({
+              userId: self.user.user.id,
+              id:id
+            }).then(res => {
+              self.getIndex(1);
+            }).catch(err => {
+              console.log(err)
+            })
+          }
+        })
+      },
+      edit(row) {
+
+      },
+    },
+		created() {},
+		mounted() {
+			 this.getIndex(1);
+		},
+  }
+</script>
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-modal-footer{
+      text-align: center!important;
+    }
+</style>>

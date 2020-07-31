@@ -1,0 +1,957 @@
+<template>
+    <div class="v-clock">
+        <Card>
+
+          <div class="left">
+              <div>
+                <div>
+                  <Button icon="ios-add" type="primary" @click="addUser">添加</Button>
+                </div>
+                <div>
+                  <Button icon="ios-remove" type="primary" @click="delUser">删除</Button>
+                </div>
+                <div>
+                  <Button icon="md-share-alt" type="primary">导入</Button>
+                </div>
+                <div>
+                  <Button icon="ios-undo" type="primary">导出</Button>
+                </div>
+              </div>
+              <div>
+                <div>
+                  <Select v-model="search.company" placeholder="请选择组织" clearable style="width: 280px;margin-left: 5px;" @on-change="changeOrg" :disabled="user.user.admin!=1">
+                    <Option v-for="item in modalUserItem.companyItem" :value="item.id" :label="item.name" :key="item.id"></Option>
+                  </Select>
+                </div>
+                <div>
+                  <Select v-model="search.department" clearable placeholder="所在部门">
+                    <Option v-for="item in departmentList" :value="item.id" :label="item.name" :key="item.id"></Option>
+                  </Select>
+                </div>
+                <div>
+                  <Select v-model="search.workinState" clearable placeholder="在职状态">
+                    <Option v-for="item in workinStateList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+                  </Select>
+                </div>
+                <div>
+                  <Select v-model="search.accountStatus" clearable placeholder="账号状态">
+                    <Option v-for="item in accountStatusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+                  </Select>
+                </div>
+                <div>
+                  <Input clearable v-model="search.query" style="width: 180px;" placeholder="请输入人员姓名或手机号" />
+                </div>
+                <div>
+                  <Button type="primary" @click="doSearch">查询</Button>
+                </div>
+              </div>
+          </div>
+
+          <tableTemplate
+            :tableList="tableList"
+            :columns="columns"
+            :page="page"
+            :size="'small'"
+            @changePage="changePage"
+            @onRowClick="onRowClick"
+            @onSelectionChange="onSelectionChange">
+          </tableTemplate>
+
+
+          <Modal
+            v-model="modalControl"
+            :title="modalTitle"
+            :loading="modalLoading"
+            :mask-closable="false"
+            @on-ok="modalOk('modalUser')"
+            @on-cancel="modalCancel"
+            width="850"
+            ok-text = '保存'
+            cancel-text = '取消'>
+            <personnel
+              ref="personnel"
+              :modalUser="modalUser"
+              :modalUserItem="modalUserItem"
+              :modalControl="modalControl"
+              :pictureItem="pictureItem"
+              @setImageListPicture="setImageListPicture"
+              @delImageListPicture="delImageListPicture"
+              @removeImageList="removeImageList"
+              @onChangeCompany="onChangeCompany"
+              @onChangeDepartment="onChangeDepartment">
+            </personnel>
+          </Modal>
+
+
+          <Modal
+            v-model="bindingAccountControl"
+            :title="bindingAccountTitle"
+            :loading="bindingAccountLoading"
+            :mask-closable="false"
+            @on-ok="bindingAccountOk('bindingAccountList')"
+            @on-cancel="bindingAccountCancel"
+            ok-text = '保存'
+            cancel-text = '取消'>
+            <bindingAccount
+              ref="bindingAccount"
+              :bindingAccountList="bindingAccountList"
+              :bindingAccountObject="bindingAccountObject">
+            </bindingAccount>
+          </Modal>
+        </Card>
+    </div>
+</template>
+
+<script>
+  import { getUserById,getByPage,addUser,userAddUser,untying,updateInfo,deleteById,organizationsGetByPage,departmentsGetByPage,positionNamesGetByPage } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import personnel from './personnel'
+  import bindingAccount from './bindingAccount'
+  import md5 from "js-md5";
+    export default {
+        name: "userIndex",
+        components: {
+          tableTemplate,
+          personnel,
+          bindingAccount,
+        },
+        props: [''],
+        data() {
+            return {
+              tableList:{},
+              page:{
+                current:1,
+              },
+              columns: [
+                {
+                  title:'序号',
+                  type: 'index',
+                  width: 80,
+                  align: 'center'
+                },
+                {
+                  type: 'selection',
+                  width: 60,
+                  align: 'center'
+                },
+                {
+                  title: '姓名',
+                  key: 'name',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '手机号',
+                  key: 'phone',
+                  align: 'center',
+                  width: 120,
+                  tooltip:true,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'numberColor',
+                      },params.row.phone)
+                    ]);
+                  },
+                },
+                {
+                  title: '所属组织',
+                  key: 'companyName',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '所属部门',
+                  key: 'departmentName',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '岗位',
+                  key: 'post',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '性别',
+                  key: 'sex',
+                  align: 'center',
+                  width: 80,
+                  tooltip:true,
+                },
+                {
+                  title: '在职状态',
+                  key: 'jobStatus',
+                  align: 'center',
+                  tooltip:true,
+                  width: 100,
+                  render: (h, params) => {
+                    const row = params.row;
+                    const color = row.jobStatus == '离职' ? 'error' : 'success';
+                    const text = row.jobStatus == '离职' ? '离职' : '在职';
+
+                    return h('Tag', {
+                      props: {
+                        type: 'dot',
+                        color: color
+                      },
+                    }, text);
+                  }
+                },
+                {
+                  title: '账号状态',
+                  align: 'center',
+                  tooltip:true,
+                  width: 100,
+                  // render: (h, params) => {
+                  //   return h('div', [
+                  //     h('div',{
+                  //       class:params.row.accountName == null?'':'fontColor',
+                  //     },params.row.accountName == null?'未激活':'已激活')
+                  //   ]);
+                  // },
+                  render: (h, params) => {
+                    const row = params.row;
+                    const color = row.accountName == null ? 'error' : 'success';
+                    const text = row.accountName == null ? '未激活' : '已激活';
+
+                    return h('Tag', {
+                      props: {
+                        type: 'dot',
+                        color: color
+                      },
+                    }, text);
+                  }
+                },
+                {
+                  title: '账号',
+                  align: 'center',
+                  tooltip:true,
+                  render: (h, params) => {
+                    if(params.row.accountName == null){
+                      return h('span',{
+                        'style':{
+                          'color':'red'
+                        }
+                      },'无')
+                    }else{
+                      let texts = params.row.accountName
+                      let arrJoin = texts
+                      if (arrJoin != null) {
+                        if (arrJoin.length > 6) {
+                          texts = arrJoin.slice(0, 6) + '...' // 进行数字截取
+                        } else {
+                          texts = arrJoin
+                        }
+                      }
+                      return h('div', [
+                        h('Tooltip', {
+                          props: {
+                            placement: 'top',
+                            transfer: true
+                          }
+                        }, [texts, h('span', {
+                          slot: 'content',
+                          style: {
+                            whiteSpace: 'normal'
+                          }
+                        }, arrJoin)
+                        ])
+                      ])
+                    }
+                  }
+                },
+                {
+                  title: '最新维护时间',
+                  key: 'updateTime',
+                  align: 'center',
+                  sortable: true,
+                  width: 110,
+                  render: (h, params) => {
+                    if(params.row.updateTime == null){
+                      return h('span',{
+                        class:'numberColor',
+                      },'无')
+                    }else{
+                      return h('span',{
+                        class:'numberColor',
+                      },this.$moment(params.row.updateTime).format('YYYY-MM-DD HH:mm'))
+                    }
+                  }
+                },
+                {
+                  title: '维护人',
+                  align: 'center',
+                  tooltip:true,
+                  render: (h, params) => {
+                    if(params.row.userName == null || params.row.userPhone == null){
+                      return h('div', [
+                        h('div',{
+                          class:'fontColor',
+                        },'无')
+                      ]);
+                    }else{
+                      // return h('div', [
+                      //   h('div',{
+                      //     class:'fontColor',
+                      //   },params.row.userName + '-' + params.row.userPhone)
+                      // ]);
+                      let texts = params.row.userName + '-' + params.row.userPhone
+                      let arrJoin = texts
+                      if (arrJoin != null) {
+                        if (arrJoin.length > 7) {
+                          texts = arrJoin.slice(0, 7) + '...' // 进行数字截取
+                        } else {
+                          texts = arrJoin
+                        }
+                      }
+                      return h('div', [
+                        h('Tooltip', {
+                          props: {
+                            placement: 'top',
+                            transfer: true
+                          }
+                        }, [texts, h('span', {
+                          slot: 'content',
+                          style: {
+                            whiteSpace: 'normal'
+                          }
+                        }, arrJoin)
+                        ])
+                      ])
+                    }
+
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 160,
+                  align: 'center',
+                  render: (h, params) => {
+                    if (params.row.accountName == null) {
+                      return h('a', [
+                        h('a', {
+                          on: {
+                            click: () => {
+                              this.bindingAccount(params.row);
+                            }
+                          }
+                        }, '绑定账号'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/编辑.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.edit(params.row)
+                            }
+                          }
+                        }),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/删除.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.delete(params.row.id)
+                            }
+                          }
+                        },),
+
+                      ])
+                    }else{
+                      return h('a', [
+                        h('a', {
+                          on: {
+                            click: () => {
+                              this.cancellation(params.row)
+                            }
+                          }
+                        }, '注销账号'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/编辑.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.edit(params.row)
+                            }
+                          }
+                        }),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/删除.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.delete(params.row.id)
+                            }
+                          }
+                        },),
+
+                      ])
+                    }
+                  }
+                }
+              ],
+              user:this.$store.getters.submitData,
+              departmentList: [],
+              workinStateList: [
+                {
+                  value:'0',
+                  label:'在职',
+                },
+                {
+                  value:'1',
+                  label:'离职',
+                },
+              ],
+              accountStatusList: [
+                {
+                  value: '0',
+                  label: '未激活'
+                },
+                {
+                  value: '1',
+                  label: '已激活'
+                },
+              ],
+              search:{
+                company: '',
+                department: '',
+                workinState: '',
+                accountStatus: '',
+                query: '',
+              },
+
+
+
+              modalControl:false,
+              modalTitle:'',
+              modalLoading:true,
+              modalUser:{
+                id:null,
+                name:'',
+                phone:'',
+                sex:'男',
+                type:'0',
+                idNum:'',
+                email:'',
+                title:'',
+                address:'',
+                company:'',
+                department:'',
+                post:'',
+                jobNum:'',
+                jobStatus:'',
+                remarks:'',
+                userId:this.$store.getters.submitData.user.id,
+                userName:this.$store.getters.submitData.user.name,
+                userPhone:this.$store.getters.submitData.user.phone,
+                // accountName:'',
+                // password:'',
+                // openAccount:false,
+                // accountAccess:'',
+              },
+              pictureItem:[],
+              modalUserItem:{
+                sexItem:[
+                  {
+                    value:'男',
+                    label:'男',
+                  },
+                  {
+                    value:'女',
+                    label:'女',
+                  },
+                ],
+                typeItem:[
+                  {
+                    value:'0',
+                    label:'身份证',
+                  },
+                ],
+                titleTypeItem:[
+                  {
+                    value:'职称',
+                    label:'职称',
+                  },
+                ],
+                departmentItem:[
+                  {
+                    value:'所属部门',
+                    label:'所属部门',
+                  },
+                ],
+                jobStatusItem:[
+                  {
+                    value:'0',
+                    label:'在职',
+                  },
+                  {
+                    value:'1',
+                    label:'离职',
+                  },
+                ],
+              },
+
+
+
+              bindingAccountControl:false,
+              bindingAccountTitle:'',
+              bindingAccountLoading:true,
+              bindingAccountList:{},
+              bindingAccountListObj:{},
+              bindingAccountObject:{
+                sexItem:[
+                  {
+                    value:'男',
+                    label:'男',
+                  },
+                  {
+                    value:'女',
+                    label:'女',
+                  },
+                ],
+                typeItem:[
+                  {
+                    value:'0',
+                    label:'身份证',
+                  },
+                ],
+                titleTypeItem:[
+                  {
+                    value:'职称',
+                    label:'职称',
+                  },
+                ],
+                departmentItem:[
+                  {
+                    value:'所属部门',
+                    label:'所属部门',
+                  },
+                ],
+                companyItem:[
+                  {
+                    value:'所属部门',
+                    label:'所属部门',
+                  },
+                ],
+                jobStatusItem:[
+                  {
+                    value:'在职状态',
+                    label:'在职状态',
+                  },
+                ],
+              },
+
+
+              delUserItem:'',
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          changeOrg(value){
+            this.search.company=value;
+
+            this.this.getIndex(1);
+          },
+          doSearch(){
+            this.getIndex(1);
+          },
+          getIndex(page,query){
+            let data = {
+              pageNum:page
+            }
+            if (this.search.company) {
+              data.companyId = this.search.company;
+            }
+            if (this.search.department) {
+              data.department = this.search.department;
+            }
+            if (this.search.workinState) {
+              data.jobStatus = this.search.workinState;
+            }
+            if (this.search.accountStatus) {
+              data.status = this.search.accountStatus;
+            }
+            if (this.search.query) {
+              data.searchContent = this.search.query;
+            }
+            getByPage(data).then(res => {
+              this.tableList = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          changePage(page){
+            this.page.current = page;
+            this.getIndex(page)
+          },
+          onRowClick(item){
+          },
+          onSelectionChange(item){
+            let arr = [];
+            arr  = item.map(function(value){return value.id;});
+            this.delUserItem = arr.join(',');
+          },
+          addUser(){
+            this.pictureItem = [];
+            this.modalUser = {
+              id:null,
+              name:'',
+              phone:'',
+              sex:'男',
+              type:'0',
+              idNum:'',
+              email:'',
+              title:'',
+              address:'',
+              company:'',
+              department:'',
+              post:'',
+              jobNum:'',
+              jobStatus:'',
+              remarks:'',
+              userId:this.$store.getters.submitData.user.id,
+              userName:this.$store.getters.submitData.user.name,
+              userPhone:this.$store.getters.submitData.user.phone,
+            }
+            this.modalTitle = '新建 / 人员信息'
+            this.modalControl = true;
+          },
+          modalOk(content){
+            this.$refs.personnel.$refs[content].validate((valid) => {
+              if (valid) {
+                if(this.pictureItem.length > 0){
+                  this.postImage();
+                }else{
+                  this.adduser(this.modalUser);
+                }
+              } else {
+                setTimeout(() => {
+                  this.modalLoading = false;
+                  this.$nextTick(() => {
+                    this.modalLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          boforeUploadImageOne(file){
+            if(file != undefined){
+              let imageData=new FormData();
+              imageData.append("images",file);
+              imageData.append("userId",'1');
+              imageData.append("tokenId",'1');
+              return this.$postUrl('img/media/upload/image',{},imageData)
+            }
+          },
+          postImage(){
+            this.$axios.all([this.boforeUploadImageOne(this.pictureItem[0])])
+              .then(this.$axios.spread((imageOne) => {
+                let largeArr = []
+                let smallArr = []
+                if(imageOne.result != undefined){
+                  largeArr.push(imageOne.result[0].large);
+                  smallArr.push(imageOne.result[0].small);
+                }
+                this.add(largeArr,smallArr)
+              }));
+          },
+          add (largeArr,smallArr) {
+            let that = this;
+            let largeImageUrl = [];
+            let smallImageUrl = [];
+
+            for (let i = 0; i < largeArr.length; i++) {
+              largeImageUrl.push(largeArr[i].id);
+            }
+            for (let u = 0; u < smallArr.length; u++) {
+              smallImageUrl.push(smallArr[u].id);
+            }
+            if(largeArr.length != 0){
+              this.modalUser.imageUrl = largeArr[0].url;
+            }
+            this.adduser(this.modalUser);
+          },
+          adduser(item){
+            if(item.id){
+              updateInfo(item)
+                .then(res => {
+                  this.modalControl = false;
+                  this.tableList = res;
+                  this.getIndex(1);
+                }).catch(err => {
+                this.$Message.error(err);
+              })
+            }else{
+              addUser(item)
+                .then(res => {
+                  this.modalControl = false;
+                  this.tableList = res;
+                  this.getIndex(1);
+                }).catch(err => {
+                this.$Message.error(err);
+              })
+            }
+          },
+          modalCancel(content){
+            this.modalControl = false;
+          },
+          bindingAccount(item){
+            this.bindingAccountList = {}
+            this.bindingAccountListObj = item;
+            this.bindingAccountTitle = '绑定账号'
+            this.bindingAccountControl = true;
+          },
+          bindingAccountOk(content){
+            this.$refs.bindingAccount.$refs[content].validate((valid) => {
+              if (valid) {
+                delete this.bindingAccountList['_index'];
+                delete this.bindingAccountList['_rowKey'];
+                // let pwd = this.changePwd(this.bindingAccountList.password);
+                userAddUser({
+                  // id:this.bindingAccountList.id,//选择已有账号的id
+                  employeeId: this.bindingAccountListObj.id,
+                  employeeName: this.bindingAccountListObj.name,
+                  employeePhone: this.bindingAccountListObj.phone,
+                  name: this.bindingAccountList.name,
+                  password: this.bindingAccountList.password,
+                  userId: this.bindingAccountListObj.userId,
+                  userName: this.bindingAccountListObj.name,
+                  userPhone: this.bindingAccountListObj.phone
+                })
+                  .then(res => {
+                    this.bindingAccountControl = false;
+                    this.getIndex(1);
+                  }).catch(err => {
+                  this.$Message.error(err);
+                })
+              } else {
+                setTimeout(() => {
+                  this.bindingAccountLoading = false;
+                  this.$nextTick(() => {
+                    this.bindingAccountLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          changePwd(pwd) {
+            let arr = md5(pwd).split("");
+            let temp1 = arr[0];
+            arr[0] = arr[arr.length - 1];
+            arr[arr.length - 1] = temp1;
+            let temp2 = arr[4];
+            arr[4] = arr[arr.length - 5];
+            arr[arr.length - 5] = temp2;
+            let userpassword = "";
+            for (var i = 0; i < arr.length; i++) {
+              userpassword = userpassword + arr[i];
+            }
+            return userpassword;
+          },
+          bindingAccountCancel(content){
+            this.bindingAccountControl = false;
+          },
+          setImageListPicture(item){
+            if(item.uploadListItems != undefined){
+              this.pictureItem = item.uploadListItems
+            }else{
+              this.pictureItem.push(item)
+            }
+
+          },
+          delImageListPicture(item){
+            if(item.uploadListItems != undefined){
+              this.pictureItem = item.uploadListItems
+            }else{
+              this.pictureItem.push(item)
+            }
+          },
+          removeImageList(file){
+            const fileList = this.pictureItem
+            this.pictureItem.splice(fileList.indexOf(file), 1);
+          },
+          edit(item){
+            this.pictureItem = [];
+            this.modalTitle = '编辑 / 人员信息'
+            this.modalControl = true;
+            this.modalUser = {
+              id:item.id,
+              name:item.name,
+              phone:item.phone,
+              sex:item.sex,
+              type:item.type.toString(),
+              idNum:item.idNum,
+              email:item.email,
+              title:item.title,
+              address:item.address,
+              company:item.company,
+              companyName:item.companyName,
+              department:item.department,
+              departmentName:item.departmentName,
+              post:item.post,
+              jobNum:item.jobNum,
+              jobStatus:item.jobStatus,
+              remarks:item.remarks,
+              userId:this.$store.getters.submitData.user.id,
+              userName:this.$store.getters.submitData.user.name,
+              userPhone:this.$store.getters.submitData.user.phone,
+            }
+            if(item.imageUrl != undefined && item.imageUrl != null){
+              this.pictureItem.push({
+                url:item.imageUrl
+              })
+            }
+            this.$nextTick(()=>{
+              this.$refs.personnel.$refs.UploadImage.type2.uploadListItems = this.pictureItem;
+            })
+          },
+          delete(id){
+            let self = this;
+            this.$Modal.confirm({
+              title: '删除',
+              content: '是否确认删除？删除后，该信息将不再可见，请谨慎操作！',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              onOk: function () {
+                deleteById({
+                  userId: self.user.user.id,
+                  id:id
+                }).then(res => {
+                  self.getIndex(1);
+                }).catch(err => {
+                  this.$Message.error(err);
+                })
+              }
+            })
+          },
+          cancellation(item){
+            let that =this;
+            this.$Modal.confirm({
+              title: '温馨提示',
+              content: '确定要注销该账号？注销后，该账号将不再可用，请谨慎操作！',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              onOk: function () {
+                untying({
+                  employeeId : item.id
+                })
+                .then(res => {
+                  that.getIndex(1);
+                }).catch(err => {
+                this.$Message.error(err);
+              })
+              }
+            })
+          },
+          delUser(){
+            if(this.delUserItem == ''){
+              this.$Message.warning('请先选择删除选项!');
+              return;
+            }
+            this.delete(this.delUserItem)
+          },
+          getFirst(page){
+            return organizationsGetByPage({
+              pageNum:page,
+            })
+          },
+          getSecond(page){
+            return departmentsGetByPage({
+              pageNum:page,
+            })
+          },
+          getThird(page){
+            return getByPage({
+              pageNum:page,
+              companyId : this.search.company,
+            })
+          },
+          getFourth(page){
+            return positionNamesGetByPage({
+              pageNum:page,
+            })
+          },
+          apiAll(){
+            this.$axios.all([this.getFirst(1),this.getSecond(1),this.getThird(1),this.getFourth(1)])
+              .then(this.$axios.spread((one,two,third,four) => {
+                this.modalUserItem.companyItem = one.list;
+                this.modalUserItem.departmentItem = two.list;
+                this.departmentList = two.list;
+                this.tableList = third;
+                this.modalUserItem.titleTypeItem = four.list;
+              }));
+          },
+          onChangeCompany(item){
+            if(item != undefined){
+              this.modalUser.company  = item.value
+              this.modalUser.companyName  = item.label
+            }
+          },
+          onChangeDepartment(item){
+            if(item != undefined){
+              this.modalUser.department  = item.value
+              this.modalUser.departmentName  = item.label
+            }
+          },
+        },
+        created() {
+          this.search.company=this.user.user.userInfo.company;
+        },
+        mounted() {
+          this.apiAll();
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+  .left{
+    >div{
+      display: flex;
+      >div{
+        margin:5px;
+      }
+      >div:nth-of-type(1){
+        margin: 5px 0;
+      }
+    }
+  }
+  @{deep}.ivu-modal-footer{
+    text-align: center!important;
+  }
+</style>

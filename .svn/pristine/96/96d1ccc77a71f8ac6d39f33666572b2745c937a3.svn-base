@@ -1,0 +1,54 @@
+import Vue from 'vue'
+import Router from 'vue-router'
+
+Vue.use(Router)
+
+const originalPush = Router.prototype.push
+Router.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch(err => err)
+}
+
+export default new Router({
+  routes: [
+    {
+      path: '/',
+      name: 'homeIndex',
+      redirect: '/login',
+      component: () => import(/* webpackChunkName: "HelloWorld" */ '@/homeIndex/homeIndex'),
+      children:[
+        {
+          name: '/index',
+          path: '/index',
+          component: resolve => require(['@/homeIndex/rightNavigation'], resolve)
+        },
+
+        //管理配置
+        {
+          name: 'userIndex',
+          path: '/management/organization/user/userIndex',
+          component: resolve => require(['@/management/organization/user/userIndex'], resolve)
+        },
+        {
+          name: 'configurationIndex',
+          path: '/management/configurationIndex/configurationIndex',
+          component: resolve => require(['@/management/configurationIndex/configurationIndex'], resolve)
+        },
+
+
+
+
+        //仓库
+        {
+          name: 'wareHouse',
+          path: '/wareHouse/wareHouseIndex/wareHouseIndex',
+          component: resolve => require(['@/wareHouse/wareHouseIndex/wareHouseIndex'], resolve)
+        },
+      ],
+    },
+    {
+      name: 'login',
+      path: '/login',
+      component: resolve => require(['@/login/loginIndex'], resolve)
+    },
+  ]
+})

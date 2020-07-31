@@ -1,0 +1,17 @@
+/**
+ * api接口统一管理
+ */
+import { get, post, $delete, put } from "./http";
+
+
+
+export const login = data => post("/api/user/login", data);
+
+export const getImgCode = data => get("/api/code/getImgCode", data);
+export const checkImgCode = data => get("/api/code/checkImgCode", data);
+
+
+export const getByPage = data => get("/api/ucUserInfo/getByPage", data);
+export const addUser = data => post("/api/ucUserInfo/addUser", data);
+export const image = data => get("/api/media/upload/image", data);
+

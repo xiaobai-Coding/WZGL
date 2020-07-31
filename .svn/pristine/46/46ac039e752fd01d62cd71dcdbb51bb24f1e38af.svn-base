@@ -1,0 +1,436 @@
+<template>
+    <div class="v-clock">
+        <Card>
+            <div style="display:flex;height: 100%;">
+              <div style="width: 300px;height: 100%;">
+                <div style="height: calc(30% - 40px);text-align: center;">
+                    <div style="width: 120px;height: 120px;margin: 0 auto;">
+                      <img src="../../../../static/images/statistical.png" alt="">
+                    </div>
+                  <div style="color: #a2a0a0;">本月访问人次</div>
+                  <div class="moneyColor" style="font-weight: 900;">2</div>
+                  <div style="color: #a2a0a0;">访问人员</div>
+                  <div class="moneyColor" style="font-weight: 900;">3</div>
+                </div>
+                <div style="height: 60%;">
+                  <div id="bar-chart" style="width: 100%;height: 100%;"></div>
+                </div>
+                <div style="height: 40px;">
+
+                </div>
+              </div>
+              <div style="width: calc(100% - 300px)">
+                <div class="right">
+                  <div>
+                    <div>
+                      <DatePicker
+                        type="daterange"
+                        v-model="search.time"
+                        placeholder="开始日期和结束日期"
+                        style="width: 200px;vertical-align: middle;margin-left: 1%;"
+                        format="yyyy-MM-dd"
+                        @on-change="getCustomDate"
+                        clearable>
+                      </DatePicker>
+                    </div>
+                    <div style="width: 100px">
+                      <Select v-model="search.systemName" clearable placeholder="所属系统">
+                        <Option
+                          v-for="item in systemList"
+                          :value="item.name"
+                          :key="item.value">
+                          {{ item.name }}
+                        </Option>
+                      </Select>
+                    </div>
+                    <div style="width: 230px">
+                      <Select v-model="search.organization" clearable placeholder="所选组织">
+                        <Option
+                          v-for="(item,index) in companyList"
+                          :value="item.id"
+                          :key="index">
+                          {{ item.name }}
+                        </Option>
+                      </Select>
+                    </div>
+                    <div>
+                      <Input clearable v-model="search.content" placeholder="操作人姓名或手机" />
+                    </div>
+                    <div>
+                      <Button type="primary" @click="getIndex(1,search)">查询</Button>
+                    </div>
+                  </div>
+                </div>
+                <tableTemplate
+                  ref="tableTemplate"
+                  :tableList="tableList"
+                  :columns="columns"
+                  :page="page"
+                  :size="'small'"
+                  @changePage="changePage">
+                </tableTemplate>
+              </div>
+            </div>
+        </Card>
+    </div>
+</template>
+
+<script>
+  let echarts = require('echarts/lib/echarts')
+  require('echarts/lib/chart/bar')
+  require('echarts/lib/component/tooltip')
+  require('echarts/lib/component/title')
+  require("echarts/lib/component/legend")
+  require("echarts/lib/chart/gauge")
+  require("echarts/lib/chart/funnel")
+
+
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import { systemLogsGetByPage,systemLogsDelete,organizationsGetByPage } from '@/axios/api';
+    export default {
+        name: "operationLogIndex",
+        components: {
+          tableTemplate,
+        },
+        props: [''],
+        data() {
+            return {
+              tableList:{},
+              page:{
+                current:1,
+              },
+              columns: [
+                {
+                  title:'序号',
+                  type: 'index',
+                  width: 60,
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '操作人',
+                  key: 'userName',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '手机号',
+                  key: 'phone',
+                  align: 'center',
+                  tooltip:true,
+                  width: 90,
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'numberColor',
+                      },params.row.phone)
+                    ]);
+                  },
+                },
+                {
+                  title: '部门',
+                  key: 'departmentName',
+                  align: 'center',
+                  width: 100,
+                  tooltip:true,
+                },
+                {
+                  title: '组织',
+                  key: 'organizationName',
+                  align: 'center',
+                  tooltip:true,
+                  width: 100,
+                  // render: (h, params) => {
+                  //   return h('div', [
+                  //     h('div',{
+                  //       class:'numberColor',
+                  //     },params.row.accountCount)
+                  //   ]);
+                  // },
+                },
+                {
+                  title: '操作时间',
+                  key: 'organizationName',
+                  align: 'center',
+                  tooltip:true,
+                  width: 140,
+                  sortable: true,
+                  render: (h, params) => {
+                    if(params.row.updateTime == null){
+                      return h('span',{
+
+                      },'无')
+                    }else{
+                      return h('span',{
+                        class:'numberColor',
+                      },this.$moment(params.row.updateTime).format('YYYY-MM-DD HH:mm'))
+                    }
+                  }
+                },
+                {
+                  title: '所属系统',
+                  key: 'system',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '所属模块',
+                  align: 'center',
+                  key:'model',
+                  // render: (h, params) => {
+                  //   const str = this.$Filters.enableType(params.row.status)
+                  //   const color = str == '否' ? 'error' : 'success';
+                  //   const text = str == '否' ? '无效' : '有效';
+                  //   return h('Tag', {
+                  //     props: {
+                  //       type: 'dot',
+                  //       color: color
+                  //     },
+                  //   }, text);
+                  // }
+                },
+                {
+                  title: '操作信息',
+                  key: 'methodName',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '访问IP',
+                  key: 'ip',
+                  align: 'center',
+                  tooltip:true,
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  align: 'center',
+                  render: (h, params) => {
+                    return h('a', [
+                      h('img', {
+                        style: {
+                          height: '20px',
+                          width: '20px',
+                        },
+                        attrs: {
+                          src: require('../../../assets/images/删除.png')
+                        },
+                        on: {
+                          click: e => {
+                            e.stopPropagation();
+                            this.delete(params.row.id)
+                          }
+                        }
+                      },),
+                    ])
+                  }
+                },
+              ],
+
+              systemList: this.$store.getters.menu,
+              companyList: [],
+
+              search:{
+                company: '',
+                time:[],
+                startDate:'',
+                endDate:'',
+                systemName:'',
+                organization:'',
+                content:'',
+              },
+
+
+              user:this.$store.getters.submitData,
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          getIndex(page,query){
+            let data = {
+              pageNum:page
+            }
+            if(query != undefined){
+              if(query.company != ''){
+                data.company = query.company
+              }
+              if(query.startDate != ''){
+                data.startDate = query.startDate
+              }
+              if(query.endDate != ''){
+                data.endDate = query.endDate
+              }
+              if(query.systemName != ''){
+                data.systemName = query.systemName
+              }
+              if(query.organization != ''){
+                data.organization = query.organization
+              }
+              if(query.content != ''){
+                data.content = query.content
+              }
+            }
+            systemLogsGetByPage(data).then(res => {
+              this.tableList = res;
+            }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          getRunningRates(){
+            this.drawBarChart();
+          },
+          drawBarChart(list){
+            let chart = echarts.init(document.getElementById('bar-chart'));
+            let option = {
+              title: {
+                text: "近一年访问人次:",
+                x: "center"
+              },
+              tooltip: {
+                trigger: "axis"
+              },
+              toolbox: {
+                feature: {
+                  mark: {
+                    show: true
+                  },
+                  dataView: {
+                    show: true,
+                    readOnly: true
+                  },
+                  magicType: {
+                    show: false,
+                    type: ["line", "bar"]
+                  },
+                  restore: {
+                    show: true
+                  },
+                  saveAsImage: {
+                    show: true
+                  }
+                }
+              },
+              calculable: true,
+              xAxis: [
+                {
+                  type: "value",
+                  splitNumber: 5,
+                  axisLine: {
+                    lineStyle: {
+                      width: 2
+                    }
+                  },
+                  axisLabel: {
+                    rotate: 55,
+                    margin: 10,
+                    textStyle: {
+                      fontSize: 12,
+                      fontStyle: "italic",
+                      fontWeight: "lighter",
+                      baseline: "top"
+                    }
+                  }
+                }
+              ],
+              yAxis: [
+                {
+                  type: "category",
+                  data: ["2019-03", "2019-03", "2019-03", "2019-03", "2019-03", "2019-03", "2019-03", "2019-03", "2019-03"],
+                  axisLabel: {
+                    show: true,
+                    textStyle: {
+                      fontWeight: "lighter",
+                      fontStyle: "italic"
+                    }
+                  },
+                  nameTextStyle: {
+                    fontWeight: "lighter"
+                  }
+                }
+              ],
+              series: [
+                {
+                  name: "2011年",
+                  type: "bar",
+                  data: [2000, 1000, 2000, 500, 2000, 300]
+                }
+              ],
+              grid: {
+                x: 60
+              }
+            };
+            chart.setOption(option);
+          },
+          changePage(page){
+            this.page.current = page;
+            this.getIndex(page)
+          },
+          getCustomDate(date){
+            this.search.startDate = date[0];
+            this.search.endDate = date[1];
+          },
+
+
+          getCompanyList(page){
+            return  organizationsGetByPage({
+              pageNum:page,
+            })
+          },
+          apiAll(){
+            this.$axios.all([this.getCompanyList(1)])
+              .then(this.$axios.spread((one) => {
+                this.companyList = one.list
+              }));
+          },
+          delete(id){
+            let self = this;
+            this.$Modal.confirm({
+              title: '删除',
+              content: '是否确认删除？删除后，该信息将不再可见，请谨慎操作！',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              onOk: function () {
+                systemLogsDelete({
+                  userId: self.user.user.id,
+                  id:id
+                }).then(res => {
+                  self.getIndex(1);
+                }).catch(err => {
+                  this.$Message.error(err);
+                })
+              }
+            })
+          },
+
+        },
+        created() {
+
+        },
+        mounted() {
+          this.getIndex(1)
+          this.getRunningRates();
+          this.apiAll();
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+      padding: 10px !important;
+      height: 100%;
+    }
+    .right{
+      >div{
+        display: flex;
+        >div{
+          margin:5px;
+        }
+        >div:nth-of-type(1){
+          margin: 5px 0;
+        }
+      }
+    }
+</style>

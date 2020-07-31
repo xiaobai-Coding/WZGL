@@ -1,0 +1,555 @@
+<template>
+    <div class="v-clock">
+        <Card>
+          <div class="left">
+            <div>
+              <div>
+                <Button icon="ios-add" type="primary" @click="addAccount">添加</Button>
+              </div>
+              <div>
+                <Button icon="ios-remove" type="primary" @click="deleteSelection">删除</Button>
+              </div>
+            </div>
+           <div>
+             <div>
+               <Select v-model="search.company" placeholder="所选公司">
+                 <Option v-for="item in companyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+               </Select>
+             </div>
+             <div>
+               <Select v-model="search.accountStatus" placeholder="账号状态">
+                 <Option v-for="item in accountStatusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+               </Select>
+             </div>
+             <div>
+               <Input v-model="search.query" placeholder="请输入人员姓名或手机号" />
+             </div>
+             <div>
+               <Button type="primary">查询</Button>
+             </div>
+           </div>
+          </div>
+
+          <tableTemplate
+            :tableList="tableList"
+            :columns="columns"
+            :page="page"
+            :size="'small'"
+            @changePage="changePage"
+            @onRowClick="onRowClick"
+            @onSelectionChange="onSelectionChange">
+          </tableTemplate>
+        </Card>
+
+
+
+      <Modal
+        v-model="addAccountModal"
+        :title="addAccountTitle"
+        :loading="addAccountLoading"
+        :mask-closable="false"
+        @on-ok="addAccountOk('addAccountUser')"
+        @on-cancel="addAccountCancel"
+        width="600"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <accountForm
+          ref="accountForm"
+          :addAccountUser="addAccountUser"
+          @choosePeople="choosePeople">
+        </accountForm>
+      </Modal>
+
+
+
+      <Modal
+        v-model="bindingModal"
+        :title="bindingTitle"
+        :loading="bindingLoading"
+        :mask-closable="false"
+        @on-ok="bindingOk"
+        @on-cancel="bindingCancel"
+        width="1000"
+        ok-text = '保存'
+        cancel-text = '取消'>
+        <accountTable
+          ref="accountTable"
+          :bindingTableList="bindingTableList"
+          :bindingUser="bindingUser"
+          :bindingPage="bindingPage"
+          :bindingChoose="bindingChoose"
+          @onRowClick="bindingSelectionChange"
+          @bindingChangePage="bindingChangePage">
+        </accountTable>
+      </Modal>
+    </div>
+</template>
+
+<script>
+  import { getAllAccountByPage,userAddUser,userDeleteById,getByPage,update } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import accountForm from './accountForm'
+  import accountTable from './accountTable'
+    export default {
+        name: "accountIndex",
+        components: {
+          tableTemplate,
+          accountForm,
+          accountTable,
+        },
+        props: [''],
+        data() {
+            return {
+              tableList:{},
+              page:{
+                current:1,
+                size:20,
+              },
+              columns: [
+                {
+                  title:'序号',
+                  type: 'index',
+                  width: 60,
+                  align: 'center'
+                },
+                {
+                  type: 'selection',
+                  width: 60,
+                  align: 'center'
+                },
+                {
+                  title: '账号',
+                  key: 'name',
+                  align: 'center',
+                },
+                {
+                  title: '账号状态',
+                  align: 'center',
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:params.row.employeeName == null?'':'fontColor',
+                      },params.row.employeeName == null?'未激活':'已激活')
+                    ]);
+                  },
+                },
+                {
+                  title: '使用人',
+                  key: 'employeeName',
+                  align: 'center',
+                },
+                {
+                  title: '使用人手机号',
+                  key: 'employeePhone',
+                  align: 'center',
+                },
+                {
+                  title: '账号角色权限',
+                  key: 'roleName',
+                  align: 'center',
+                },
+                {
+                  title: '最新维护时间',
+                  key: 'createTime',
+                  align: 'center',
+                  render: (h, params) => {
+                    if(params.row.createTime == null){
+                      return h('span',{
+                        'style':{
+                          // 'color':'red'
+                        }
+                      },'无')
+                    }else{
+                      return h('span',{},this.$moment(params.row.updateTime).format('YYYY-MM-DD HH:mm'))
+                    }
+                  }
+                },
+                {
+                  title: '维护人',
+                  align: 'center',
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:'fontColor',
+                      },params.row.userName + '-' + params.row.userPhone)
+                    ]);
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 240,
+                  align: 'center',
+                  render: (h, params) => {
+                    if (params.row.employeeName == null) {
+                      return h('a', [
+                        h('a', {
+                          on: {
+                            click: () => {
+
+                            }
+                          }
+                        }, '日志流水'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('a', {
+                          on: {
+                            click: () => {
+                              this.bindingUsers(params.row)
+                            }
+                          }
+                        }, '绑定使用人'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/编辑.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.edit(params.row)
+                            }
+                          }
+                        }),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/删除.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.delete(params.row.id)
+                            }
+                          }
+                        },),
+
+                      ])
+                    }else{
+                      return h('a', [
+                        h('a', {
+                          on: {
+                            click: () => {
+
+                            }
+                          }
+                        }, '日志流水'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('a', {
+                          on: {
+                            click: () => {
+                              this.bindingUsers(params.row)
+                            }
+                          }
+                        }, '变更使用人'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/编辑.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.edit(params.row)
+                            }
+                          }
+                        }),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/删除.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.delete(params.row.id)
+                            }
+                          }
+                        },),
+
+                      ])
+                    }
+                  }
+                }
+              ],
+              user:this.$store.getters.submitData,
+              companyList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+                {
+                  value: 'Sydney',
+                  label: 'Sydney'
+                },
+                {
+                  value: 'Ottawa',
+                  label: 'Ottawa'
+                },
+                {
+                  value: 'Paris',
+                  label: 'Paris'
+                },
+                {
+                  value: 'Canberra',
+                  label: 'Canberra'
+                }
+              ],
+              accountStatusList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+              ],
+              search:{
+                company: '',
+                accountStatus: '',
+                query: '',
+              },
+
+              addAccountModal:false,
+              addAccountTitle:'',
+              addAccountLoading:true,
+              addAccountUser:{},
+
+
+              bindingModal:false,
+              bindingTitle:'',
+              bindingLoading:true,
+              bindingUser:{
+                query:'',
+              },
+              bindingTableList:{},
+              bindingPage:{
+                current:1,
+                size:20,
+              },
+              bindingClickItem:{},
+              bindingSelection:[],
+              bindingChoose: '',
+
+              deleteItem:'',
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          getIndex(page){
+            getAllAccountByPage({
+              pageNum:page,
+            }).then(res => {
+              this.tableList = res;
+            }).catch(err => {
+              console.log(err)
+            })
+          },
+          changePage(page){
+            this.page.current = page;
+            this.getIndex(page)
+          },
+          onRowClick(item){
+            console.log(item)
+          },
+          onSelectionChange(item){
+            let arr = [];
+            arr  = item.map(function(value){return value.id;});
+            this.deleteItem = arr.join(',');
+          },
+          addAccount(){
+            this.addAccountUser = {}
+            this.addAccountTitle = '新建/账号信息'
+            this.addAccountModal = true;
+          },
+          addAccountOk(content){
+            this.$refs.accountForm.$refs[content].validate((valid) => {
+              if (valid) {
+                this.postAccount();
+              } else {
+                setTimeout(() => {
+                  this.addAccountLoading = false;
+                  this.$nextTick(() => {
+                    this.addAccountLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          addAccountCancel(content){
+            this.addAccountModal = false;
+          },
+          postAccount(){
+            userAddUser({
+              name: this.addAccountUser.name,
+              password: this.addAccountUser.password,
+              remarks: this.addAccountUser.remarks,
+              userId: this.user.user.id,
+              userName: this.user.user.name,
+              userPhone: this.user.user.phone,
+              employeeId:this.addAccountUser.employeeId,
+              employeeName:this.addAccountUser.employeeName,
+              employeePhone:this.addAccountUser.employeePhone,
+            })
+              .then(res => {
+                this.addAccountModal = false;
+                this.getIndex(1);
+              })
+            .catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          delete(id){
+            let self = this;
+            this.$Modal.confirm({
+              title: '删除',
+              content: '是否确认删除？删除后，该信息将不再可见，请谨慎操作！',
+              width: '400px',
+              okText: '确定',
+              cancelText: '关闭',
+              onOk: function () {
+                userDeleteById({
+                  userId: self.user.user.id,
+                  id:id
+                }).then(res => {
+                  self.getIndex(1);
+                }).catch(err => {
+                  console.log(err)
+                })
+              }
+            })
+          },
+          deleteSelection(){
+            this.delete(this.deleteItem)
+          },
+          bindingUsers(item){
+            this.bindingClickItem = item
+            this.getBindingIndex(1);
+            this.$refs.accountTable.bindingChoose = ''
+            this.bindingTitle = '账号绑定(如果绑定的人员已有账号，之前使用账号将自动解绑！)'
+            this.bindingModal = true;
+          },
+          getBindingIndex(page){
+            getByPage({
+              pageNum:page,
+            }).then(res => {
+              this.bindingTableList = res;
+            }).catch(err => {
+              console.log(err)
+            })
+          },
+          bindingOk(){
+            if(this.bindingSelection != []){
+              update({
+                id:this.bindingClickItem.id,
+                name:this.bindingClickItem.name,
+                password:this.bindingClickItem.password,
+                phone:this.bindingSelection.phone,
+                employeeId:this.bindingSelection.id,
+                employeeName:this.bindingSelection.name,
+                employeePhone:this.bindingSelection.phone,
+                roleId:this.bindingClickItem.roleId,
+                roleName:this.bindingClickItem.roleName,
+                createTime:this.bindingClickItem.createTime,
+                userId: this.user.user.id,
+                userName: this.user.user.name,
+                userPhone: this.user.user.phone,
+                remarks:this.bindingClickItem.remarks,
+                status:this.bindingClickItem.status,
+                companyName:this.bindingClickItem.companyName,
+                companyId:this.bindingClickItem.companyId,
+              }).then(res => {
+                this.getIndex(1);
+                this.bindingModal = false;
+                this.bindingTableList = res;
+              }).catch(err => {
+                console.log(err)
+              })
+            }else{
+              setTimeout(() => {
+                this.bindingLoading = false;
+                this.$nextTick(() => {
+                  this.bindingLoading = true;
+                });
+              }, 2000);
+            }
+          },
+          bindingCancel(content){
+            this.bindingModal = false;
+          },
+          bindingChangePage(page){
+            this.bindingPage.current = page;
+            this.getBindingIndex(page)
+          },
+          bindingSelectionChange(item){
+            this.bindingSelection = item;
+          },
+          edit(item){
+            this.addAccountUser = {
+              name:item.name,
+              password:item.password,
+              remarks:item.remarks,
+              user:item.user,
+              employeeId:item.employeeId,
+              employeeName:item.employeeName,
+              employeePhone:item.employeePhone,
+            }
+            this.addAccountTitle = '编辑/账号信息'
+            this.addAccountModal = true;
+          },
+          choosePeople(item){
+            this.addAccountUser.employeeId = item.id
+            this.addAccountUser.employeeName = item.name
+            this.addAccountUser.employeePhone = item.phone
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+          this.getIndex(1);
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    @{deep}.ivu-modal-footer{
+      text-align: center!important;
+    }
+    .left{
+      >div{
+        display: flex;
+        >div{
+          margin:5px;
+        }
+        >div:nth-of-type(1){
+          margin: 5px 0;
+        }
+      }
+    }
+</style>

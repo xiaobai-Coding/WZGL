@@ -1,0 +1,8 @@
+/**
+ * api接口统一管理
+ */
+import { get, post, $delete, put } from "./http";
+
+
+
+export const apiDeviceDetail = data => post("api/device/detail", data);

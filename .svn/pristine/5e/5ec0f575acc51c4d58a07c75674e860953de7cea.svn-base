@@ -1,0 +1,418 @@
+<template>
+    <div class="v-clock">
+        <Card>
+          <div class="left">
+            <div>
+              <div>
+                <Button icon="ios-add" type="primary" @click="addAccount">添加</Button>
+              </div>
+              <div>
+                <Button icon="ios-remove" type="primary">删除</Button>
+              </div>
+            </div>
+           <div>
+             <div>
+               <Select v-model="search.company" placeholder="所选公司">
+                 <Option v-for="item in companyList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+               </Select>
+             </div>
+             <div>
+               <Select v-model="search.accountStatus" placeholder="账号状态">
+                 <Option v-for="item in accountStatusList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+               </Select>
+             </div>
+             <div>
+               <Input v-model="search.query" placeholder="请输入人员姓名或手机号" />
+             </div>
+             <div>
+               <Button type="primary">查询</Button>
+             </div>
+           </div>
+          </div>
+
+          <tableTemplate
+            :tableList="tableList"
+            :columns="columns"
+            :page="page"
+            :size="'small'"
+            @changePage="changePage"
+            @onRowClick="onRowClick"
+            @onSelectionChange="onSelectionChange">
+          </tableTemplate>
+        </Card>
+
+
+
+      <Modal
+        v-model="addAccountModal"
+        :title="addAccountTitle"
+        :loading="addAccountLoading"
+        :mask-closable="false"
+        @on-ok="addAccountOk('modalUser')"
+        @on-cancel="addAccountCancel"
+        width="600">
+        <accountForm
+          ref="accountForm"
+          :addAccountUser="addAccountUser">
+        </accountForm>
+      </Modal>
+    </div>
+</template>
+
+<script>
+  import { getAllAccountByPage,userAddUser } from '@/axios/api';
+  import tableTemplate from '@/commonComponent/tableTemplate'
+  import accountForm from './accountForm'
+    export default {
+        name: "accountIndex",
+        components: {
+          tableTemplate,
+          accountForm,
+        },
+        props: [''],
+        data() {
+            return {
+              tableList:{},
+              page:{
+                current:1,
+                size:20,
+              },
+              columns: [
+                {
+                  title:'序号',
+                  type: 'index',
+                  width: 60,
+                  align: 'center'
+                },
+                {
+                  type: 'selection',
+                  width: 60,
+                  align: 'center'
+                },
+                {
+                  title: '账号',
+                  key: 'name',
+                  align: 'center',
+                },
+                {
+                  title: '账号状态',
+                  align: 'center',
+                  render: (h, params) => {
+                    return h('div', [
+                      h('div',{
+                        class:params.row.employeeName == null?'':'fontColor',
+                      },params.row.employeeName == null?'未激活':'已激活')
+                    ]);
+                  },
+                },
+                {
+                  title: '使用人',
+                  key: 'employeeName',
+                  align: 'center',
+                },
+                {
+                  title: '使用人手机号',
+                  key: 'employeePhone',
+                  align: 'center',
+                },
+                {
+                  title: '账号角色权限',
+                  key: 'roleName',
+                  align: 'center',
+                },
+                {
+                  title: '最新维护时间',
+                  key: 'createTime',
+                  align: 'center',
+                  render: (h, params) => {
+                    if(params.row.createTime == null){
+                      return h('span',{
+                        'style':{
+                          // 'color':'red'
+                        }
+                      },this.$moment(params.row.createTime).format('YYYY-MM-DD HH:mm'))
+                    }else{
+                      return h('span',{},this.$moment(params.row.updateTime).format('YYYY-MM-DD HH:mm'))
+                    }
+                  }
+                },
+                {
+                  title: '维护人',
+                  align: 'center',
+                  render: (h, params) => {
+                    if(params.row.userName == null || params.row.userPhone == null){
+                      return h('div', [
+                        h('div',{
+                          class:'fontColor',
+                        },'无')
+                      ]);
+                    }else{
+                      return h('div', [
+                        h('div',{
+                          class:'fontColor',
+                        },params.row.userName + '-' + params.row.userPhone)
+                      ]);
+                    }
+
+                  },
+                },
+                {
+                  title: '操作',
+                  key: 'action',
+                  width: 240,
+                  align: 'center',
+                  render: (h, params) => {
+                    if (params.row.employeeName == null) {
+                      return h('a', [
+                        h('a', {
+                          on: {
+                            click: () => {
+
+                            }
+                          }
+                        }, '日志流水'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('a', {
+                          on: {
+                            click: () => {
+
+                            }
+                          }
+                        }, '绑定使用人'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/编辑.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.edit(params.row)
+                            }
+                          }
+                        }),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/删除.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.delete(params.row.id)
+                            }
+                          }
+                        },),
+
+                      ])
+                    }else{
+                      return h('a', [
+                        h('a', {
+                          on: {
+                            click: () => {
+
+                            }
+                          }
+                        }, '日志流水'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('a', {
+                          on: {
+                            click: () => {
+
+                            }
+                          }
+                        }, '变更使用人'),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/编辑.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.edit(params.row)
+                            }
+                          }
+                        }),
+                        h('Divider', {props: {type: 'vertical'}}),
+                        h('img', {
+                          style: {
+                            height: '20px',
+                            width: '20px',
+                          },
+                          attrs: {
+                            src: require('../../../assets/images/删除.png')
+                          },
+                          on: {
+                            click: e => {
+                              e.stopPropagation();
+                              this.delete(params.row.id)
+                            }
+                          }
+                        },),
+
+                      ])
+                    }
+                  }
+                }
+              ],
+              user:this.$store.getters.submitData,
+              companyList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+                {
+                  value: 'Sydney',
+                  label: 'Sydney'
+                },
+                {
+                  value: 'Ottawa',
+                  label: 'Ottawa'
+                },
+                {
+                  value: 'Paris',
+                  label: 'Paris'
+                },
+                {
+                  value: 'Canberra',
+                  label: 'Canberra'
+                }
+              ],
+              accountStatusList: [
+                {
+                  value: 'New York',
+                  label: 'New York'
+                },
+                {
+                  value: 'London',
+                  label: 'London'
+                },
+              ],
+              search:{
+                company: '',
+                accountStatus: '',
+                query: '',
+              },
+
+
+              addAccountModal:false,
+              addAccountTitle:'',
+              addAccountLoading:true,
+              addAccountUser:{
+                account:'',
+                password:'',
+                remarks:'',
+                user:'',
+              },
+            }
+        },
+        computed: {},
+        watch: {},
+        methods: {
+          getIndex(page){
+            getAllAccountByPage({
+              pageNum:page,
+            }).then(res => {
+              this.tableList = res;
+            }).catch(err => {
+              console.log(err)
+            })
+          },
+          changePage(page){
+            console.log(page)
+          },
+          onRowClick(item){
+            console.log(item)
+          },
+          onSelectionChange(item){
+            console.log(item)
+          },
+          addAccount(){
+            this.addAccountUser = {
+              account:'',
+              password:'',
+              remarks:'',
+              user:'',
+            }
+            this.addAccountTitle = '新建/账号信息'
+            this.addAccountModal = true;
+          },
+          addAccountOk(content){
+            this.$refs.personnel.$refs[content].validate((valid) => {
+              if (valid) {
+                this.postAccount();
+              } else {
+                setTimeout(() => {
+                  this.addAccountLoading = false;
+                  this.$nextTick(() => {
+                    this.addAccountLoading = true;
+                  });
+                }, 2000);
+              }
+            })
+          },
+          postAccount(){
+            userAddUser({
+              employeeId: this.bindingAccountListObj.id,
+              employeeName: this.bindingAccountListObj.name,
+              employeePhone: this.bindingAccountListObj.phone,
+              name: this.bindingAccountList.name,
+              password: this.bindingAccountList.password,
+              userId: this.bindingAccountListObj.userId,
+              userName: this.bindingAccountListObj.userName,
+              userPhone: this.bindingAccountListObj.userPhone
+            })
+              .then(res => {
+                this.bindingAccountControl = false;
+                this.getIndex(1);
+              }).catch(err => {
+              this.$Message.error(err);
+            })
+          },
+          addAccountCancel(content){
+            this.addAccountModal = false;
+          },
+        },
+        created() {
+
+        },
+        mounted() {
+          this.getIndex(1);
+        },
+    }
+</script>
+
+<style scoped lang="less">
+    @deep: ~'>>>';
+    @{deep}.ivu-card-body {
+        padding: 10px !important;
+    }
+    .left{
+      >div{
+        display: flex;
+        >div{
+          margin:5px;
+        }
+        >div:nth-of-type(1){
+          margin: 5px 0;
+        }
+      }
+    }
+</style>
